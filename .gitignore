@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+*.swp
+
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Pub
+.pub-cache/
+.pub/
+pubspec.lock
+
+# Pencil MCP
+*.pen.lock
+
+# Misc
+.env
+*.log

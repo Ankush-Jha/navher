@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Washroom Details</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#ff4b72",
+          "primary-light": "#ff8fa7",
+          "background-light": "#ffffff",
+          "background-dark": "#1a1a1a",
+          "surface": "#f7f7f7",
+          "accent-blue": "#1cb0f6",
+          "accent-green": "#58cc02",
+          "accent-yellow": "#ffc800",
+          "accent-teal": "#2dd4bf",
+          "accent-teal-light": "#f0fdfa",
+        },
+        fontFamily: {
+          "display": ["Nunito", "sans-serif"]
+        },
+        borderRadius: {
+          "DEFAULT": "12px", 
+          "lg": "16px", 
+          "xl": "24px", 
+          "2xl": "32px",
+          "full": "9999px"
+        },
+        boxShadow: {
+          "button": "0 4px 0 0 rgba(0,0,0,0.1)",
+          "button-active": "0 0 0 0 rgba(0,0,0,0.1)",
+          "card": "0 2px 8px rgba(0,0,0,0.05)",
+        }
+      },
+    },
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<style>
+  body {
+    font-family: 'Nunito', sans-serif;
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+  }
+  .material-symbols-outlined.fill {
+    font-variation-settings: 'FILL' 1;
+  }
+  .notion-card {
+    border: 2px solid #99f6e4;
+    border-radius: 20px;
+    background: #f0fdfa;
+    transition: all 0.2s ease;
+  }
+  .notion-card:hover {
+    background: #e6fffa;
+  }
+  .duo-btn {
+    box-shadow: 0 4px 0 0 var(--btn-shadow-color, #d33c5e);
+    transform: translateY(0);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .duo-btn:active {
+    box-shadow: 0 0 0 0 var(--btn-shadow-color, #d33c5e);
+    transform: translateY(4px);
+  }
+</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-slate-100 flex justify-center items-start min-h-screen">
+<div class="relative w-full max-w-[400px] min-h-[850px] h-screen sm:h-auto sm:my-8 bg-background-light dark:bg-background-dark sm:rounded-[40px] sm:border-[12px] border-slate-900 shadow-2xl overflow-hidden flex flex-col font-display">
+<div class="h-12 w-full flex items-center justify-between px-6 pt-2 z-50 bg-background-light dark:bg-background-dark">
+<span class="text-[15px] font-bold text-slate-900 dark:text-slate-100 tracking-tight">9:41</span>
+<div class="flex gap-1.5 items-center text-slate-900 dark:text-slate-100">
+<span class="material-symbols-outlined text-[18px] fill">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[18px] fill">wifi</span>
+<span class="material-symbols-outlined text-[18px] fill">battery_full</span>
+</div>
+</div>
+<div class="px-5 pt-2 pb-4 bg-background-light dark:bg-background-dark z-10 sticky top-12 flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-400">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<div class="flex-1 h-3.5 bg-slate-100 rounded-full overflow-hidden relative">
+<div class="absolute top-0 left-0 h-full w-full bg-accent-blue rounded-full relative">
+<div class="absolute top-1 left-2 right-2 h-1 bg-white/30 rounded-full"></div>
+</div>
+</div>
+<div class="size-10 rounded-full bg-accent-blue/10 flex items-center justify-center shrink-0">
+<span class="text-xl">🐦</span>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto pb-32">
+<div class="px-6 pt-2 pb-4 flex items-start justify-between">
+<div>
+<h2 class="text-slate-900 dark:text-slate-100 text-[28px] font-extrabold leading-[1.1] mb-2 tracking-tight">
+        Nexus Mall<br/>
+<span class="text-accent-teal text-[22px]">Ground Floor, Near Gate 2</span>
+</h2>
+<p class="text-slate-500 font-bold text-sm">Open until 11:00 PM • 120m away</p>
+</div>
+<div class="flex flex-col items-center bg-accent-yellow/10 border-2 border-accent-yellow/20 rounded-2xl p-2 min-w-[64px]">
+<span class="text-accent-yellow font-black text-2xl">4.8</span>
+<div class="flex text-accent-yellow text-[10px] mt-0.5">
+<span class="material-symbols-outlined fill text-[12px]">star</span>
+<span class="material-symbols-outlined fill text-[12px]">star</span>
+<span class="material-symbols-outlined fill text-[12px]">star</span>
+<span class="material-symbols-outlined fill text-[12px]">star</span>
+<span class="material-symbols-outlined fill text-[12px]">star_half</span>
+</div>
+</div>
+</div>
+<div class="px-6 mb-6">
+<div class="bg-primary/10 rounded-2xl p-4 flex gap-3 border-2 border-primary/20">
+<span class="text-2xl mt-0.5">💖</span>
+<div>
+<p class="text-primary font-bold text-sm mb-0.5">Women-only facility.</p>
+<p class="text-slate-600 text-sm font-semibold">Highly rated for safety and cleanliness.</p>
+</div>
+</div>
+</div>
+<div class="px-6 space-y-4">
+<h3 class="text-[15px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+  Verified Features
+</h3>
+<div class="notion-card p-4 flex items-center justify-between shadow-sm relative overflow-hidden">
+<div class="flex items-center gap-4">
+<div class="size-14 rounded-2xl bg-gradient-to-br from-pink-300 to-pink-500 flex items-center justify-center text-3xl shadow-sm border border-pink-200">
+  🛍️
+</div>
+<div>
+<p class="font-extrabold text-slate-800 text-lg">Pad Vending Machine</p>
+<div class="flex items-center gap-1.5 text-accent-teal mt-0.5">
+<span class="material-symbols-outlined text-[16px] fill">check_circle</span>
+<p class="text-[15px] font-bold">Fully Stocked</p>
+</div>
+</div>
+</div>
+</div>
+<div class="notion-card p-4 flex items-center justify-between shadow-sm relative overflow-hidden mt-4">
+<div class="flex items-center gap-4">
+<div class="size-14 rounded-2xl bg-gradient-to-br from-blue-300 to-blue-500 flex items-center justify-center text-3xl shadow-sm border border-blue-200">
+  ✨
+</div>
+<div>
+<p class="font-extrabold text-slate-800 text-lg">Cleanliness</p>
+<div class="flex items-center gap-1.5 text-accent-teal mt-0.5">
+<span class="material-symbols-outlined text-[16px] fill">cleaning_services</span>
+<p class="text-[15px] font-bold">Cleaned 10 mins ago</p>
+</div>
+</div>
+</div>
+</div>
+<div class="notion-card p-4 flex items-center justify-between shadow-sm relative overflow-hidden mt-4">
+<div class="flex items-center gap-4">
+<div class="size-14 rounded-2xl bg-gradient-to-br from-purple-300 to-purple-500 flex items-center justify-center text-3xl shadow-sm border border-purple-200">
+  🛡️
+</div>
+<div>
+<p class="font-extrabold text-slate-800 text-lg">Safety &amp; Privacy</p>
+<div class="flex items-center gap-1.5 text-accent-teal mt-0.5">
+<span class="material-symbols-outlined text-[16px] fill">security</span>
+<p class="text-[15px] font-bold">Well-lit, Secure Locks</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="px-6 mt-6 mb-8">
+<div class="flex items-center justify-center gap-2 p-3 rounded-2xl border-2 border-accent-blue border-dashed bg-accent-blue/5">
+<span class="material-symbols-outlined fill text-accent-blue text-2xl">rate_review</span>
+<p class="text-slate-700 font-bold text-sm">Rate after visit to earn <span class="text-accent-blue text-base">+20 Points</span>!</p>
+</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 w-full px-6 pb-8 pt-4 bg-white z-20 border-t-2 border-slate-100">
+<button class="duo-btn w-full bg-accent-teal text-slate-900 font-extrabold text-lg py-4 rounded-2xl flex items-center justify-center gap-2" style="--btn-shadow-color: #0f766e">
+<span class="material-symbols-outlined fill text-[24px]">directions</span>
+      NAVIGATE NOW
+    </button>
+</div>
+<div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-slate-900 rounded-full z-40"></div>
+</div>
+</body></html>

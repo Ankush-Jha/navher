@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding - Playful &amp; Clean</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        colors: {
+          "primary": "#ff4b72", // Playful pink
+          "primary-light": "#ff8fa7",
+          "background-light": "#ffffff",
+          "background-dark": "#1a1a1a",
+          "surface": "#f7f7f7",
+          "accent-blue": "#1cb0f6", // Duolingo blue
+          "accent-green": "#58cc02", // Duolingo green
+          "accent-yellow": "#ffc800", // Duolingo yellow
+        },
+        fontFamily: {
+          "display": ["Nunito", "sans-serif"], // Rounded, playful font
+          "serif": ["Playfair Display", "serif"] // Bold, elegant serif
+        },
+        borderRadius: {
+          "DEFAULT": "12px", 
+          "lg": "16px", 
+          "xl": "24px", 
+          "2xl": "32px",
+          "full": "9999px"
+        },
+        boxShadow: {
+          "button": "0 4px 0 0 rgba(0,0,0,0.1)",
+          "button-active": "0 0 0 0 rgba(0,0,0,0.1)",
+          "card": "0 2px 8px rgba(0,0,0,0.05)",
+        }
+      },
+    },
+  }
+</script>
+<style>
+  body {
+    font-family: 'Nunito', sans-serif;
+    min-height: max(884px, 100dvh);
+  }
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+  }
+  .material-symbols-outlined.fill {
+    font-variation-settings: 'FILL' 1;
+  }
+  .duo-btn {
+    box-shadow: 0 4px 0 0 var(--btn-shadow-color, #d33c5e);
+    transform: translateY(0);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .duo-btn:active {
+    box-shadow: 0 0 0 0 var(--btn-shadow-color, #d33c5e);
+    transform: translateY(4px);
+  }
+</style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-slate-100 flex justify-center items-start min-h-screen">
+<div class="relative w-full max-w-[400px] min-h-[850px] h-screen sm:h-auto sm:my-8 bg-background-light dark:bg-background-dark sm:rounded-[40px] sm:border-[12px] border-slate-900 shadow-2xl overflow-hidden flex flex-col font-display">
+<div class="h-12 w-full flex items-center justify-between px-6 pt-2 z-50 bg-background-light dark:bg-background-dark">
+<span class="text-[15px] font-bold text-slate-900 dark:text-slate-100 tracking-tight">9:41</span>
+<div class="flex gap-1.5 items-center text-slate-900 dark:text-slate-100">
+<span class="material-symbols-outlined text-[18px] fill">signal_cellular_4_bar</span>
+<span class="material-symbols-outlined text-[18px] fill">wifi</span>
+<span class="material-symbols-outlined text-[18px] fill">battery_full</span>
+</div>
+</div>
+<div class="px-5 pt-2 pb-4 bg-background-light dark:bg-background-dark z-10 sticky top-12 flex flex-col gap-3">
+<div class="flex items-center gap-3">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 transition-colors text-slate-400">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<div class="flex-1 h-3.5 bg-slate-100 rounded-full overflow-hidden relative">
+<div class="absolute top-0 left-0 h-full w-1/3 bg-accent-green rounded-full relative transition-all duration-500">
+<div class="absolute top-1 left-2 right-2 h-1 bg-white/30 rounded-full"></div>
+</div>
+</div>
+<div class="size-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+<span class="text-xl">🦊</span>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto pb-32 flex flex-col items-center justify-start pt-8 px-6 text-center">
+<div class="w-full max-w-[280px] aspect-[4/3] bg-primary/5 rounded-[32px] mb-10 relative overflow-hidden shadow-inner flex items-center justify-center border-2 border-primary/10">
+<img alt="Woman navigating city 3D illustration" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUOiY11j7NPcXC8IHdNuvzTnJ1VGxvQdiCTaA0s0NoS7x0IFXqb48RnbzqR7NUp8WfSJFvDbrKbFzKosV31fiExB8UAc2OsBaEiDcAXHp-PhPpwSAb1GwqVwLCAwfUTMGTc6EPr64rAjEZV75n08Oj-T0-l2K0g2XTfGgVB4iWqyZjYy0bmIwl00kaulM3uYUK8-TLyUTUvMxudbPHbgSvhwYFB4NYCGy-IYMVborQXA9WS3hqrR8TW0RKXTiPgDthjG373Qy_Vx7N"/>
+</div>
+<h1 class="font-serif text-slate-900 dark:text-slate-100 text-[38px] font-black leading-[1.15] mb-4 tracking-tight">
+  Find <span class="text-primary italic">Clean</span><br/>Washrooms
+</h1>
+<p class="text-slate-500 dark:text-slate-400 font-bold text-[17px] leading-relaxed px-2">
+  Navigate your city with confidence. Discover verified, hygienic facilities exclusively for women anywhere in India.
+</p>
+</div>
+<div class="absolute bottom-0 left-0 w-full px-6 pb-8 pt-4 bg-gradient-to-t from-white via-white to-transparent z-20">
+<button class="duo-btn w-full bg-primary text-white font-extrabold text-lg py-4 rounded-2xl flex items-center justify-center gap-2" style="--btn-shadow-color: #d33c5e">
+      CONTINUE
+      <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
+</button>
+</div>
+<div class="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-slate-900 rounded-full z-40"></div>
+</div>
+
+</body></html>

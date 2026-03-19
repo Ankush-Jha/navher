@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Electric Peony Global Base ───────────────────────────────────── */
+@layer base {
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    min-height: 100dvh;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #f9fafb;
+    /* surface-container-low */
+    color: #0f172a;
+    /* on-surface */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Material Symbols variable font */
+  .material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  .material-symbols-outlined.fill {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+}
+
+/* ─── Electric Peony Component Classes ─────────────────────────────── */
+@layer components {
+
+  /* Tactile CTA button (4px solid bottom shadow, press-down on :active) */
+  .tactile-btn {
+    @apply relative overflow-hidden rounded-full font-extrabold text-[17px] transition-all duration-100;
+    box-shadow: 0 4px 0 0 #d33c5e;
+  }
+
+  .tactile-btn:active {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+
+  .tactile-btn-green {
+    @apply relative overflow-hidden rounded-full font-extrabold text-[17px] transition-all duration-100;
+    box-shadow: 0 4px 0 0 #3ea500;
+  }
+
+  .tactile-btn-green:active {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+
+  .tactile-btn-blue {
+    @apply relative overflow-hidden rounded-full font-extrabold text-[17px] transition-all duration-100;
+    box-shadow: 0 4px 0 0 #158bb2;
+  }
+
+  .tactile-btn-blue:active {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+
+  .tactile-btn-outline {
+    @apply relative overflow-hidden rounded-full font-extrabold text-[17px] transition-all duration-100;
+    box-shadow: 0 4px 0 0 #e2e8f0;
+  }
+
+  .tactile-btn-outline:active {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+
+  /* Glass glare shimmer — overlay atop tactile buttons */
+  .glass-glare::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-[40%] pointer-events-none rounded-full;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0) 100%);
+  }
+
+  /* Surface card (white bg, subtle border, 16px corner) */
+  .surface-card {
+    @apply bg-white rounded-[1rem] border-2 border-outline-variant shadow-card;
+  }
+
+  /* Section label (uppercase, tracked, on-surface-variant) */
+  .section-label {
+    @apply text-[13px] font-bold uppercase tracking-widest text-on-surface-variant;
+  }
+
+  /* Pill chip base */
+  .chip {
+    @apply inline-flex items-center gap-1 px-4 py-2 rounded-full border-2 font-bold text-[13px] transition-all duration-100 active:translate-y-0.5;
+  }
+
+  .chip-active {
+    @apply bg-primary text-white border-primary;
+    box-shadow: 0 4px 0 0 #a10038;
+  }
+
+  .chip-active:active {
+    transform: translateY(4px);
+    box-shadow: none;
+  }
+
+  .chip-idle {
+    @apply bg-white border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary;
+  }
+
+  /* Bottom nav (shared across all main pages) */
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-3 bg-white border-t-2 border-primary/10 rounded-t-[32px];
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Sticky bottom CTA panel */
+  .bottom-cta-panel {
+    @apply fixed bottom-0 left-0 right-0 bg-white p-4 pb-8;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Progress bar with glass glare */
+  .ep-progress-track {
+    @apply h-4 w-full bg-outline-variant rounded-full relative overflow-hidden;
+  }
+
+  .ep-progress-fill {
+    @apply h-full bg-primary rounded-full relative;
+  }
+
+  .ep-progress-fill::after {
+    content: '';
+    @apply absolute top-0 left-0 w-full;
+    height: 40%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
+    border-radius: inherit;
+  }
+
+  /* No scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

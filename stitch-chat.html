@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f4258c",
+                        "background-light": "#f8f5f7",
+                        "background-dark": "#221019",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0px",
+                        "lg": "0px",
+                        "xl": "0px",
+                        "full": "9999px"
+                    },
+                    borderWidth: {
+                        '4': '4px',
+                    },
+                    boxShadow: {
+                        'neo': '4px 4px 0px 0px rgba(0,0,0,1)',
+                        'neo-lg': '8px 8px 0px 0px rgba(0,0,0,1)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .neo-border { border: 4px solid #000000; }
+        .neo-shadow { box-shadow: 4px 4px 0px 0px #000000; }
+        .neo-shadow-sm { box-shadow: 2px 2px 0px 0px #000000; }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="max-w-md mx-auto min-h-screen flex flex-col bg-white dark:bg-background-dark border-x-4 border-black">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-10 bg-white dark:bg-background-dark border-b-4 border-black p-4">
+<div class="flex items-center justify-between gap-4">
+<button class="size-12 neo-border neo-shadow-sm bg-white hover:bg-slate-100 flex items-center justify-center">
+<span class="material-symbols-outlined font-bold">arrow_back</span>
+</button>
+<div class="flex-1">
+<h1 class="text-2xl font-extrabold uppercase tracking-tight leading-none">Aarohi</h1>
+<div class="flex items-center gap-2 mt-1">
+<span class="size-2 bg-primary rounded-full animate-pulse"></span>
+<p class="text-sm font-bold uppercase text-primary">2 mins away</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-slate-500 uppercase">Emergency Contact</p>
+<p class="text-sm font-extrabold">+1 (555) 012-3456</p>
+</div>
+</div>
+</header>
+<!-- SOS Status Banner -->
+<div class="bg-primary p-3 border-b-4 border-black flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-white font-bold">warning</span>
+<span class="text-white font-black uppercase tracking-widest text-sm">Active SOS Signal</span>
+</div>
+<!-- Chat Area -->
+<main class="flex-1 overflow-y-auto p-4 space-y-6 bg-[#f0f0f0] dark:bg-slate-900/50">
+<div class="flex justify-center">
+<span class="bg-black text-white px-4 py-1 text-xs font-black uppercase neo-shadow-sm">Today • 10:42 PM</span>
+</div>
+<!-- Received Message -->
+<div class="flex flex-col items-start gap-2 max-w-[85%]">
+<div class="flex items-center gap-2">
+<div class="size-8 neo-border overflow-hidden">
+<img alt="Contact Avatar" class="w-full h-full object-cover" data-alt="Profile picture of a young woman" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNfoHptMOsaTnsIoDj8Yc-HwkNcjlEygw7EOAvsbUzsUppWMsrmf3RC7o3jt7vVCLkVtQ9QW3fjEjT_Rp7O4F0Qwr7CBB_8eHziXbLDTrJH3lsFWDXbJoHay3EGf5cLNh7YHU--OgwFZAeMGNcG6wPK8KpvCi9EmU9o6x__kUaMu5LQJXN1JodpCZfsqP9u_MKHfofsGBApG-F8Go3ao-0EzdNz0wNlrjxcoNvAUgshs55TN7a6IhKv8lYu0UPyJEqkDDUsm-oDpQ"/>
+</div>
+<span class="font-black text-sm uppercase tracking-tighter">Aarohi</span>
+</div>
+<div class="bg-primary text-white p-4 neo-border neo-shadow">
+<p class="font-bold leading-tight text-lg">I'm near the park entrance, where are you? It's really dark here.</p>
+</div>
+<span class="text-[10px] font-black uppercase text-slate-500">Delivered • 10:43 PM</span>
+</div>
+<!-- Sent Message -->
+<div class="flex flex-col items-end gap-2 max-w-[85%] ml-auto">
+<div class="flex items-center gap-2 justify-end">
+<span class="font-black text-sm uppercase tracking-tighter">Me</span>
+<div class="size-8 neo-border bg-black"></div>
+</div>
+<div class="bg-white dark:bg-slate-800 p-4 neo-border neo-shadow">
+<p class="font-bold leading-tight text-lg">I see you, stay put! I am coming towards the North gate right now. Calling police too.</p>
+</div>
+<span class="text-[10px] font-black uppercase text-slate-500">Read • 10:44 PM</span>
+</div>
+<!-- Received Message -->
+<div class="flex flex-col items-start gap-2 max-w-[85%]">
+<div class="flex items-center gap-2">
+<div class="size-8 neo-border overflow-hidden">
+<img alt="Contact Avatar" class="w-full h-full object-cover" data-alt="Profile picture of a young woman" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_-jOiT08Q_oM1cerJH51f5zv3Zda1Bfty-yEbm_0tscU0-MJroQ_BVc15xlbp86iMlQ3DD8-VduStTW4TYhkWmV9MijhAZrvuvzTdRPp01l6QsVLCPlBvSn4-q2BmbUAp4SIfhr3i9lRAqm7l2bDNQNqM3T-SkVEGkUjwLmnTAg0eKDXHuhWeLqt2QDcwKhOegjKFK5eVyULto4RI606KNzuAAbkatZyYCp4PY4_ksYhYfyWBm6Tnu3RMTOD56UpkUTgPYLc7PUY"/>
+</div>
+<span class="font-black text-sm uppercase tracking-tighter">Aarohi</span>
+</div>
+<div class="bg-primary text-white p-4 neo-border neo-shadow">
+<p class="font-bold leading-tight text-lg">Okay, please hurry. I'm staying by the light. There's a black car parked nearby.</p>
+</div>
+<span class="text-[10px] font-black uppercase text-slate-500">Delivered • 10:45 PM</span>
+</div>
+<!-- Location Share Component -->
+<div class="w-full neo-border bg-white overflow-hidden neo-shadow mt-4">
+<div class="h-32 bg-slate-200 relative">
+<img alt="Map location" class="w-full h-full object-cover grayscale contrast-125" data-alt="Map showing current location in the city" data-location="Central Park Entrance" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAm8G71Nozt59gSkOSQz0G0DDbBiARios5e1uojaFRfNPux_06Qw3mPhVESowPjPCB2weQKwLFelqP3RKBgyilS9ohAhH-d8De2U_8bazJE3rB8VT3t-mg0xN1dYkNt5qUzt6hhV5qtaHfDgQ6u8zq4AN6m_RiEwyh3kg1KC76d3sRfSlnbB4JZl8fs7S7Q8M1hCT9CDtBh2Lz1ktrOH8MpjAes2ns7_BZIWyLNjtzXg7gI2LahUncv4568S4b2XdaaYd3uFlPrntc"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl font-bold">location_on</span>
+</div>
+</div>
+<div class="p-3 border-t-4 border-black flex justify-between items-center bg-white">
+<div>
+<p class="font-black uppercase text-xs">Live Location</p>
+<p class="font-bold text-sm">Shared by Aarohi</p>
+</div>
+<button class="bg-black text-white px-4 py-2 font-black text-xs uppercase neo-shadow-sm">View Map</button>
+</div>
+</div>
+</main>
+<!-- Input Area -->
+<footer class="p-4 bg-white dark:bg-background-dark border-t-4 border-black">
+<div class="flex gap-3">
+<div class="flex-1 relative">
+<input class="w-full py-4 px-4 neo-border neo-shadow-sm focus:ring-0 focus:outline-none font-bold text-lg placeholder:text-slate-400 placeholder:uppercase placeholder:text-sm" placeholder="Type urgent message..." type="text"/>
+</div>
+<button class="bg-primary text-white size-14 flex items-center justify-center neo-border neo-shadow hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all">
+<span class="material-symbols-outlined font-black text-3xl">send</span>
+</button>
+</div>
+<div class="mt-4 grid grid-cols-2 gap-3">
+<button class="neo-border bg-slate-100 py-2 px-3 font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">phone</span> Call Security
+                </button>
+<button class="neo-border bg-slate-100 py-2 px-3 font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">share</span> Share Link
+                </button>
+</div>
+</footer>
+</div>
+</body></html>

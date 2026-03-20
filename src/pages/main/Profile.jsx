@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Avatar from '../../components/Avatar';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { useAppStore } from '../../store';
@@ -11,7 +12,7 @@ const MENU = [
     { icon: 'card_giftcard', label: 'My Rewards', path: '/app/rewards' },
     { icon: 'contact_emergency', label: 'Safety Contacts', path: '/app/settings' },
     { icon: 'calendar_month', label: 'Cycle Privacy', path: '/app/settings' },
-    { icon: 'notifications_active', label: 'Notification Settings', path: '/app/notifications' },
+    { icon: 'notifications_active', label: 'Notification Settings', path: '/app/settings' },
 ];
 
 // Compute level title based on points
@@ -72,7 +73,6 @@ export default function Profile() {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            setUser(null);
             navigate('/auth/onboarding');
         } catch (err) {
             console.error('Logout error:', err);
@@ -99,8 +99,8 @@ export default function Profile() {
                 {/* Avatar */}
                 <section className="flex flex-col items-center text-center space-y-4">
                     <div className="relative">
-                        <div className="w-32 h-32 rounded-full border-4 border-primary p-1 bg-white flex items-center justify-center text-6xl">
-                            {user?.avatar || '🦊'}
+                        <div className="w-32 h-32 rounded-full border-4 border-primary p-1 bg-white flex items-center justify-center">
+                            <Avatar value={user?.avatar} size="w-full h-full" textSize="text-6xl" />
                         </div>
                         <div className="absolute bottom-1 right-1 bg-secondary text-white p-1.5 rounded-full border-4 border-white">
                             <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>

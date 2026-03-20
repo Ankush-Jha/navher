@@ -1,7 +1,7 @@
 // Auth service — wraps Firebase Auth operations
 import {
-    signInWithPhoneNumber,
-    RecaptchaVerifier,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
     GoogleAuthProvider,
     signInWithPopup,
     signOut,
@@ -11,45 +11,43 @@ import {
 import { auth } from "./firebase";
 import { createUserProfile, getUserProfile } from "../services/userService";
 
-// ─── Phone OTP ────────────────────────────────────────────────────────────────
+// ─── Timeout helper — fail fast if Firestore is blocked ──────────────────────
 
-let confirmationResult = null;
-
-/**
- * Step 1: Send OTP to phone number
- * @param {string} phoneNumber — e.g. "+919876543210"
- * @param {HTMLElement} recaptchaContainer — DOM element for invisible reCAPTCHA
- */
-export async function sendPhoneOTP(phoneNumber, recaptchaContainer) {
-    const appVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
-        size: "invisible",
-    });
-
-    confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-    return confirmationResult;
+function withTimeout(promise, ms = 3000) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Firestore timeout")), ms)
+        ),
+    ]);
 }
 
-/**
- * Step 2: Verify OTP and sign in
- * @param {string} otp — 6-digit OTP entered by user
- * @returns {{ isNewUser: boolean, user: object }}
- */
-export async function verifyPhoneOTP(otp) {
-    if (!confirmationResult) throw new Error("No OTP sent yet. Call sendPhoneOTP first.");
+// ─── Email / Password ─────────────────────────────────────────────────────────
 
-    const result = await confirmationResult.confirm(otp);
+export async function registerWithEmail(email, password) {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
     const user = result.user;
 
-    // Check if this is a new user — create Firestore profile
-    const existing = await getUserProfile(user.uid);
-    const isNewUser = !existing;
+    // Best-effort profile creation — don't block sign-in if Firestore is slow
+    withTimeout(createUserProfile(user.uid, {
+        email: user.email ?? "",
+        name: "",
+        avatar: "🦊",
+    })).catch((err) => console.warn("Profile creation skipped:", err.message));
 
-    if (isNewUser) {
-        await createUserProfile(user.uid, {
-            phone: user.phoneNumber ?? "",
-            name: "",
-            avatar: "🦊",
-        });
+    return { isNewUser: true, user };
+}
+
+export async function loginWithEmail(email, password) {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    const user = result.user;
+
+    let isNewUser = false;
+    try {
+        const existing = await withTimeout(getUserProfile(user.uid));
+        isNewUser = !existing;
+    } catch (err) {
+        console.warn("Firestore unavailable during login:", err.message);
     }
 
     return { isNewUser, user };
@@ -59,18 +57,28 @@ export async function verifyPhoneOTP(otp) {
 
 export async function signInWithGoogle() {
     const provider = new GoogleAuthProvider();
+    // Do NOT force account picker on every login — returning users should
+    // be signed in silently without picking their account again
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
-    const existing = await getUserProfile(user.uid);
-    const isNewUser = !existing;
+    // Default to false (returning user) — safer than true.
+    // If Firestore times out, we send them to /app/map not /auth/setup.
+    let isNewUser = false;
+    try {
+        const existing = await withTimeout(getUserProfile(user.uid));
+        isNewUser = !existing;
 
-    if (isNewUser) {
-        await createUserProfile(user.uid, {
-            name: user.displayName ?? "",
-            email: user.email ?? "",
-            avatar: "🦊",
-        });
+        if (isNewUser) {
+            withTimeout(createUserProfile(user.uid, {
+                name: user.displayName ?? "",
+                email: user.email ?? "",
+                avatar: "🦊",
+            })).catch((err) => console.warn("Profile creation skipped:", err.message));
+        }
+    } catch (firestoreErr) {
+        console.warn("Firestore unavailable during sign-in:", firestoreErr.message);
+        // isNewUser stays false — go to map, not setup
     }
 
     return { isNewUser, user };

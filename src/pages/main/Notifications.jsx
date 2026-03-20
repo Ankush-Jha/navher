@@ -21,10 +21,10 @@ export default function Notifications() {
     useEffect(() => {
         const uid = auth.currentUser?.uid;
         if (!uid) { setLoading(false); return; }
-        getNotifications(uid)
-            .then(setNotifications)
-            .catch(console.error)
-            .finally(() => setLoading(false));
+        Promise.race([
+            getNotifications(uid),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+        ]).then(setNotifications).catch((err) => console.warn('Notifications unavailable:', err.message)).finally(() => setLoading(false));
     }, []);
 
     const unreadCount = notifications.filter(n => !n.read).length;
@@ -79,7 +79,15 @@ export default function Notifications() {
                                 return (
                                     <div
                                         key={n.id}
-                                        className={`flex items-start gap-4 p-4 rounded-2xl border-2 ${n.read ? 'bg-white border-outline-variant' : 'bg-primary-fixed/30 border-primary/30'}`}
+                                        onClick={() => {
+                                            // Navigate based on notification type
+                                            if (n.type === 'sos' && n.sosId) navigate(`/app/sos-chat?sosId=${n.sosId}`);
+                                            else if (n.type === 'pad_update' && n.locationId) navigate(`/app/pad-machine/${n.locationId}`);
+                                            else if (n.type === 'review' && n.locationId) navigate(`/app/location/${n.locationId}`);
+                                            else if (n.type === 'points') navigate('/app/rewards');
+                                            else if (n.type === 'cycle') navigate('/app/cycle');
+                                        }}
+                                        className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer active:scale-[0.98] transition-transform ${n.read ? 'bg-white border-outline-variant' : 'bg-primary-fixed/30 border-primary/30'}`}
                                     >
                                         <div className={`w-12 h-12 ${style.color} rounded-2xl flex items-center justify-center shrink-0`}>
                                             <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>{style.icon}</span>
@@ -90,6 +98,11 @@ export default function Notifications() {
                                                 {!n.read && <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0 mt-1" />}
                                             </div>
                                             <p className="text-xs text-on-surface-variant mt-0.5 line-clamp-2">{n.body}</p>
+                                            {n.createdAt && (
+                                                <p className="text-[10px] text-outline mt-1 font-medium">
+                                                    {new Date(n.createdAt?.seconds ? n.createdAt.seconds * 1000 : n.createdAt).toLocaleString()}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -99,7 +112,7 @@ export default function Notifications() {
                 )}
             </main>
 
-            <BottomNav active="profile" />
+            <BottomNav active="notifications" />
         </div>
     );
 }

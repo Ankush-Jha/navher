@@ -4,8 +4,8 @@ import TopBar from '../../components/TopBar';
 import DuoButton from '../../components/DuoButton';
 import { logCycleDay } from '../../services/cycleService';
 import { auth } from '../../lib/firebase';
-import { db } from '../../lib/firebase';
-import { doc, increment, updateDoc } from 'firebase/firestore';
+import { awardPoints } from '../../services/userService';
+import { useAppStore } from '../../store';
 import toast from 'react-hot-toast';
 
 const FLOW_OPTIONS = ['None', 'Spotting', 'Light', 'Medium', 'Heavy'];
@@ -21,7 +21,8 @@ const SYMPTOMS = [
 
 export default function LogSymptoms() {
     const navigate = useNavigate();
-    const [flow, setFlow] = useState(2);
+    const { addFoxPoints } = useAppStore();
+    const [flow, setFlow] = useState(0); // default to None
     const [mood, setMood] = useState(null);
     const [symptoms, setSymptoms] = useState([]);
     const [pain, setPain] = useState(3);
@@ -52,9 +53,10 @@ export default function LogSymptoms() {
                 notes: `Pain: ${pain}/10. Mood: ${mood || 'not set'}. ${note}`.trim(),
             });
 
-            // Award +10 foxPoints in Firestore
+            // Award +10 foxPoints via proper service
             try {
-                await updateDoc(doc(db, 'users', uid), { 'rewards.totalPoints': increment(10) });
+                await awardPoints(uid, 10, 'symptom_log', 'daily');
+                addFoxPoints(10);
             } catch (pointsErr) {
                 console.warn('Points update failed (non-critical):', pointsErr);
             }

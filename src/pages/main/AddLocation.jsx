@@ -1,10 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
 import DuoButton from '../../components/DuoButton';
 import { addLocation } from '../../services/locationService';
+import { reverseGeocode } from '../../services/overpassService';
 import { useAppStore } from '../../store';
 import toast from 'react-hot-toast';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+
+// Custom draggable marker for pin refinement
+function DraggableMarker({ lat, lng, onMove }) {
+    const markerRef = useRef(null);
+    const eventHandlers = useMemo(() => ({
+        dragend() {
+            const marker = markerRef.current;
+            if (marker) {
+                const pos = marker.getLatLng();
+                onMove(pos.lat, pos.lng);
+            }
+        },
+    }), [onMove]);
+
+    const icon = L.divIcon({
+        className: '',
+        html: '<div style="background:#E8356D;width:28px;height:28px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+    });
+
+    return <Marker draggable position={[lat, lng]} ref={markerRef} eventHandlers={eventHandlers} icon={icon} />;
+}
 
 const TYPES = [
     { id: 'washroom', emoji: '🚻', label: 'Washroom', desc: 'Clean restroom' },
@@ -20,17 +46,29 @@ export default function AddLocation() {
 
     const [lat, setLat] = useState(null);
     const [lng, setLng] = useState(null);
+    const [address, setAddress] = useState('');
+    const [hasPads, setHasPads] = useState(false);
+    const [isFree, setIsFree] = useState(false);
+    const [is24x7, setIs24x7] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Get user location so we can tag the pin
+    // Get user location + reverse-geocode to readable address via Nominatim (free)
     useEffect(() => {
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    setLat(pos.coords.latitude);
-                    setLng(pos.coords.longitude);
+                async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    setLat(latitude);
+                    setLng(longitude);
+                    try {
+                        const addr = await reverseGeocode(latitude, longitude);
+                        // Trim to first 2 parts for brevity
+                        setAddress(addr.split(',').slice(0, 3).join(',').trim());
+                    } catch {
+                        setAddress(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+                    }
                 },
-                (err) => console.warn("Failed to get location for add pin", err)
+                (err) => console.warn("Failed to get location", err)
             );
         }
     }, []);
@@ -39,18 +77,22 @@ export default function AddLocation() {
         if (e && e.preventDefault) e.preventDefault();
         if (!name.trim() || submitting || !firebaseUser?.uid) return;
 
-        // Fallback fake location if user denied permissions for demo purposes
-        const targetLat = lat || 28.6139;
-        const targetLng = lng || 77.2090;
+        if (!lat || !lng) {
+            toast.error('Could not determine your location. Please ensure location services are enabled.');
+            return;
+        }
 
         setSubmitting(true);
         try {
             await addLocation({
                 type,
                 name: name.trim(),
-                lat: targetLat,
-                lng: targetLng,
-                address: 'Added by user coordinates',
+                lat,
+                lng,
+                address: address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+                hasPads,
+                isFree,
+                is24x7,
                 addedBy: firebaseUser.uid
             });
             addFoxPoints(15); // Bonus points for adding location
@@ -123,24 +165,30 @@ export default function AddLocation() {
                         </div>
                     </div>
 
-                    {/* Map pin */}
+                    {/* Interactive Map */}
                     <div>
-                        <p className="section-label mb-3">Pin Location</p>
-                        <div className="relative h-44 rounded-2xl overflow-hidden border border-slate-100 shadow-card">
-                            <img
-                                src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=600"
-                                alt="Map"
-                                className="w-full h-full object-cover opacity-60"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="bg-white w-12 h-12 rounded-full shadow-card flex items-center justify-center">
-                                    <span className="material-symbols-outlined fill text-primary text-[26px]">location_on</span>
+                        <p className="section-label mb-3">Pin Location <span className="text-outline font-medium normal-case">(drag to adjust)</span></p>
+                        {lat && lng ? (
+                            <div className="relative h-44 rounded-2xl overflow-hidden border border-slate-100 shadow-card">
+                                <MapContainer
+                                    center={[lat, lng]}
+                                    zoom={16}
+                                    scrollWheelZoom={false}
+                                    style={{ height: '100%', width: '100%' }}
+                                    zoomControl={false}
+                                >
+                                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                    <DraggableMarker lat={lat} lng={lng} onMove={(newLat, newLng) => { setLat(newLat); setLng(newLng); }} />
+                                </MapContainer>
+                            </div>
+                        ) : (
+                            <div className="h-44 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50">
+                                <div className="text-center">
+                                    <span className="material-symbols-outlined text-slate-300 text-3xl">location_searching</span>
+                                    <p className="text-xs font-bold text-slate-400 mt-1">Getting your location…</p>
                                 </div>
                             </div>
-                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full whitespace-nowrap">
-                                <p className="text-xs font-extrabold text-slate-700">Tap to refine location</p>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Name input */}
@@ -155,6 +203,29 @@ export default function AddLocation() {
                                 onChange={(e) => setName(e.target.value)}
                                 className="w-full text-[17px] font-extrabold text-slate-800 placeholder:text-slate-300 bg-transparent focus:outline-none"
                             />
+                        </div>
+                    </div>
+
+                    {/* Extra Details */}
+                    <div>
+                        <p className="section-label mb-3">Additional Details</p>
+                        <div className="space-y-3">
+                            {[
+                                { label: 'Has Pads Available', icon: 'water_drop', state: hasPads, setter: setHasPads },
+                                { label: 'Free to Use', icon: 'money_off', state: isFree, setter: setIsFree },
+                                { label: 'Open 24×7', icon: 'schedule', state: is24x7, setter: setIs24x7 },
+                            ].map(({ label, icon, state, setter }) => (
+                                <button
+                                    key={label}
+                                    type="button"
+                                    onClick={() => setter(s => !s)}
+                                    className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${state ? 'border-primary bg-primary/5' : 'border-slate-100 bg-slate-50'}`}
+                                >
+                                    <span className={`material-symbols-outlined text-[20px] ${state ? 'text-primary' : 'text-slate-400'}`} style={{ fontVariationSettings: state ? "'FILL' 1" : "'FILL' 0" }}>{icon}</span>
+                                    <span className={`font-bold text-sm flex-1 text-left ${state ? 'text-primary' : 'text-slate-600'}`}>{label}</span>
+                                    <span className={`material-symbols-outlined text-[20px] ${state ? 'text-primary' : 'text-slate-300'}`} style={{ fontVariationSettings: "'FILL' 1" }}>{state ? 'check_circle' : 'circle'}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </form>

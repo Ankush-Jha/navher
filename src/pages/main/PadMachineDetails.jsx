@@ -28,6 +28,7 @@ export default function PadMachineDetails() {
     const [picked, setPicked] = useState('working');
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [lastUpdateTime, setLastUpdateTime] = useState(null);
 
     useEffect(() => {
         async function fetchData() {
@@ -62,10 +63,20 @@ export default function PadMachineDetails() {
 
     const handleSubmitUpdate = async () => {
         if (!firebaseUser?.uid || submitting) return;
+
+        // Flood control — 30 second cooldown between updates
+        const now = Date.now();
+        if (lastUpdateTime && (now - lastUpdateTime) < 30000) {
+            const remaining = Math.ceil((30000 - (now - lastUpdateTime)) / 1000);
+            toast.error(`Please wait ${remaining}s before updating again.`);
+            return;
+        }
+
         setSubmitting(true);
         try {
             await updateLocationStatus(id, picked, firebaseUser.uid);
             setSubmitted(true);
+            setLastUpdateTime(Date.now());
             addFoxPoints(5);
             toast.success('Machine status updated successfully!');
 
@@ -210,7 +221,13 @@ export default function PadMachineDetails() {
             </div>
 
             <div className="bottom-cta">
-                <DuoButton color="primary" onClick={() => { /* integration with map navigation later */ }}>
+                <DuoButton color="primary" onClick={() => {
+                    if (machine?.lat && machine?.lng) {
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${machine.lat},${machine.lng}&travelmode=walking`, '_blank');
+                    } else {
+                        import('react-hot-toast').then(m => m.default.error('Location not available for this machine.'));
+                    }
+                }}>
                     <span className="material-symbols-outlined fill mr-2">navigation</span>
                     Navigate to Machine
                 </DuoButton>

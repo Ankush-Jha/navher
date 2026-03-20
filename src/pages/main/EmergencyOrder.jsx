@@ -8,10 +8,47 @@ import { useAppStore } from '../../store';
 import toast from 'react-hot-toast';
 
 const PARTNERS = [
-    { id: 'blinkit', shortName: 'b', bg: 'bg-yellow-100 border-yellow-200', text: 'text-yellow-700', name: 'Blinkit', time: '15 min', price: '₹85', rating: 4.8, fastest: true },
-    { id: 'zepto', shortName: 'Z', bg: 'bg-purple-100 border-purple-200', text: 'text-purple-700', name: 'Zepto', time: '18 min', price: '₹89', rating: 4.7, fastest: false },
-    { id: 'instamart', shortName: 'SI', bg: 'bg-orange-100 border-orange-200', text: 'text-orange-600', name: 'Instamart', time: '20 min', price: '₹95', rating: 4.6, fastest: false },
+    {
+        id: 'blinkit',
+        shortName: 'b',
+        bg: 'bg-yellow-100 border-yellow-200',
+        text: 'text-yellow-700',
+        name: 'Blinkit',
+        time: '15 min',
+        price: '₹85',
+        rating: 4.8,
+        fastest: true,
+        url: 'https://blinkit.com',
+        deepLink: 'blinkit://search?q=sanitary+pads',
+    },
+    {
+        id: 'zepto',
+        shortName: 'Z',
+        bg: 'bg-purple-100 border-purple-200',
+        text: 'text-purple-700',
+        name: 'Zepto',
+        time: '18 min',
+        price: '₹89',
+        rating: 4.7,
+        fastest: false,
+        url: 'https://www.zeptonow.com',
+        deepLink: 'zepto://search?q=sanitary+pads',
+    },
+    {
+        id: 'instamart',
+        shortName: 'SI',
+        bg: 'bg-orange-100 border-orange-200',
+        text: 'text-orange-600',
+        name: 'Instamart',
+        time: '20 min',
+        price: '₹95',
+        rating: 4.6,
+        fastest: false,
+        url: 'https://www.swiggy.com/instamart',
+        deepLink: 'swiggy://instamart/search?q=sanitary+pads',
+    },
 ];
+
 
 export default function EmergencyOrder() {
     const navigate = useNavigate();
@@ -19,32 +56,38 @@ export default function EmergencyOrder() {
     const [picked, setPicked] = useState('blinkit');
     const [trackingStatus, setTrackingStatus] = useState('');
 
-    const handleOrder = async () => {
+    const handleOrder = async (partnerId = picked) => {
         if (!firebaseUser?.uid) return;
+        const partner = PARTNERS.find(p => p.id === partnerId);
+        if (!partner) return;
         try {
             setTrackingStatus('Redirecting...');
-            // Track click in Firestore
-            await addDoc(collection(db, "orders"), {
-                userId: firebaseUser.uid,
-                partner: picked,
-                status: 'initiated',
-                createdAt: serverTimestamp()
-            });
-            addFoxPoints(50); // Reward for using NavHer
 
-            // Fake redirect delay
-            setTimeout(() => {
-                toast.success(`Redirecting to ${PARTNERS.find(p => p.id === picked).name} app!`);
-                setTrackingStatus('');
-                navigate(-1);
-            }, 1000);
+            // Track click in Firestore (non-blocking)
+            Promise.race([
+                addDoc(collection(db, "orders"), {
+                    userId: firebaseUser.uid,
+                    partner: partnerId,
+                    status: 'initiated',
+                    createdAt: serverTimestamp()
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+            ]).catch(err => console.warn('Order tracking skipped:', err.message));
 
+            addFoxPoints(50);
+
+            // Open the actual delivery app / website
+            toast.success(`Opening ${partner.name}… 🚀`);
+            window.open(partner.url, '_blank', 'noopener,noreferrer');
+
+            setTimeout(() => setTrackingStatus(''), 1500);
         } catch (e) {
             console.error("Failed to track order:", e);
-            toast.error('Order tracking failed. Please try again.');
+            toast.error('Something went wrong. Please try again.');
             setTrackingStatus('');
         }
     };
+
 
     return (
         <div className="min-h-dvh bg-surface-container-low font-body text-on-surface pb-32">
@@ -143,9 +186,9 @@ export default function EmergencyOrder() {
                         <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>bolt</span>
                         {trackingStatus ? trackingStatus : 'Pick Fastest for Me'}
                     </TactileButton>
-                    <button className="w-full py-2 text-on-surface-variant text-[14px] font-bold flex items-center justify-center gap-2 hover:text-error transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">medical_services</span>
-                        Call nearest medical store
+                    <button onClick={() => window.open('tel:112')} className="w-full py-2 text-on-surface-variant text-[14px] font-bold flex items-center justify-center gap-2 hover:text-error transition-colors">
+                        <span className="material-symbols-outlined text-[18px]">emergency</span>
+                        Call Emergency Helpline (112)
                     </button>
                 </div>
             </div>

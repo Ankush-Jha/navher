@@ -1,78 +1,114 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TopBar from '../../components/TopBar';
 import BottomNav from '../../components/BottomNav';
 import { searchLocations } from '../../services/locationService';
+import { fetchRealPOIsNearby } from '../../services/overpassService';
+import toast from 'react-hot-toast';
 
-const CHIPS = ['Free', 'Has Pads', 'Open Now', 'Cleanest', '24×7'];
+const CHIPS = ['Free', 'Has Pads', 'Open Now', '24×7', 'Cleanest'];
+
+const TYPE_ICONS = {
+    washroom: '🚻',
+    pharmacy: '💊',
+    pad_machine: '🩸',
+    hospital: '🏥',
+};
+
+function distanceKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export default function SearchList() {
     const navigate = useNavigate();
     const [query, setQuery] = useState('');
-    const [active, setActive] = useState(['Has Pads']);
+    const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [active, setActive] = useState([]); // no default filter — show everything
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sortByDistance, setSortByDistance] = useState(true);
+    const userPosRef = useRef(null);
 
     const toggle = (c) => setActive(p => p.includes(c) ? p.filter(x => x !== c) : [...p, c]);
 
+    // Debounce the search query to avoid spamming APIs on every keystroke
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(query), 400);
+        return () => clearTimeout(timer);
+    }, [query]);
+
     useEffect(() => {
         let isMounted = true;
+        setLoading(true);
 
-        const fetchResults = async () => {
-            setLoading(true);
-            try {
-                navigator.geolocation.getCurrentPosition(
-                    async (position) => {
-                        const { latitude, longitude } = position.coords;
-                        const data = await searchLocations({
-                            searchQuery: query,
-                            lat: latitude,
-                            lng: longitude,
-                            radiusKm: 10
-                        });
+        const FALLBACK = { lat: 28.6139, lng: 77.2090 }; // Delhi fallback
 
-                        if (!isMounted) return;
+        const run = async (lat, lng) => {
+            if (!isMounted) return;
+            userPosRef.current = { lat, lng };
 
-                        // Apply pill filters
-                        let filtered = data;
-                        if (active.includes('Free')) filtered = filtered.filter(l => l.isFree);
-                        if (active.includes('Has Pads')) filtered = filtered.filter(l => l.hasPads);
-                        if (active.includes('24×7') || active.includes('Open Now')) filtered = filtered.filter(l => l.is24x7);
-                        if (active.includes('Cleanest')) filtered = filtered.filter(l => (l.cleanlinessScore ?? 0) >= 4);
+            // Fetch both Firestore community locations + real OSM POIs in parallel
+            const [firestoreData, osmData] = await Promise.allSettled([
+                searchLocations({ searchQuery: debouncedQuery, lat, lng, radiusKm: 10 }),
+                fetchRealPOIsNearby({ lat, lng, radiusKm: 5 }),
+            ]);
 
-                        // Sort by distance (ascending)
-                        filtered = filtered.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+            if (!isMounted) return;
 
-                        setResults(filtered);
-                        setLoading(false);
-                    },
-                    (error) => {
-                        console.error('Geo error', error);
-                        setLoading(false);
-                    },
-                    { timeout: 10000, maximumAge: 60000 }
-                );
-            } catch (err) {
-                console.error(err);
-                if (isMounted) setLoading(false);
-            }
+            const fsItems = (firestoreData.status === 'fulfilled' ? firestoreData.value : [])
+                .map(l => ({ ...l, distance: distanceKm(lat, lng, l.lat, l.lng) }));
+
+            const osmItems = (osmData.status === 'fulfilled' ? osmData.value : [])
+                .map(l => ({ ...l, distance: distanceKm(lat, lng, l.lat, l.lng) }));
+
+            // Merge — Firestore takes priority, OSM fills gaps
+            const fsIds = new Set(fsItems.map(l => l.id));
+            const merged = [
+                ...fsItems,
+                ...osmItems.filter(l => !fsIds.has(l.id)),
+            ];
+
+            // Apply search query filter
+            let filtered = debouncedQuery.trim()
+                ? merged.filter(l =>
+                    l.name?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+                    l.address?.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
+                    l.type?.toLowerCase().includes(debouncedQuery.toLowerCase()))
+                : merged;
+
+            // Apply chip filters
+            if (active.includes('Free')) filtered = filtered.filter(l => l.isFree);
+            if (active.includes('Has Pads')) filtered = filtered.filter(l => l.hasPads);
+            if (active.includes('24×7') || active.includes('Open Now')) filtered = filtered.filter(l => l.is24x7);
+            if (active.includes('Cleanest')) filtered = filtered.filter(l => (l.cleanlinessScore ?? 0) >= 4);
+
+            // Sort by distance
+            filtered.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
+
+            setResults(filtered);
+            setLoading(false);
         };
 
-        const timeoutId = setTimeout(() => {
-            fetchResults();
-        }, 300); // 300ms debounce
+        navigator.geolocation.getCurrentPosition(
+            pos => run(pos.coords.latitude, pos.coords.longitude),
+            () => {
+                toast('📍 Location unavailable — showing Delhi results', { icon: '⚠️', duration: 4000 });
+                run(FALLBACK.lat, FALLBACK.lng);
+            },
+            { timeout: 10000, enableHighAccuracy: true, maximumAge: 30000 }
+        );
 
-        return () => {
-            isMounted = false;
-            clearTimeout(timeoutId);
-        };
-    }, [query, active]);
+        return () => { isMounted = false; };
+    }, [debouncedQuery, active]);
 
     return (
         <div className="min-h-dvh bg-surface-container-low font-body text-on-surface pb-32">
-            {/* TopBar with shadow-header */}
-            <header className="sticky top-0 z-50 flex items-center justify-between px-5 h-20 w-full bg-white shadow-[0_4px_0_0_#ff4b72]">
+            {/* Header */}
+            <header className="sticky top-0 z-[600] flex items-center justify-between px-5 h-20 w-full bg-white shadow-[0_4px_0_0_#ff4b72]">
                 <div className="flex items-center gap-3">
                     <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-rose-50 transition-colors">
                         <span className="material-symbols-outlined text-primary">arrow_back</span>
@@ -96,24 +132,13 @@ export default function SearchList() {
                     <input
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search by location or mall..."
+                        placeholder="Search washrooms, pharmacies, pads…"
                         className="w-full pl-14 pr-5 py-5 bg-white border-2 border-outline-variant rounded-xl text-[15px] font-medium outline-none transition-all focus:border-primary focus:shadow-[0_4px_0_0_#ff4b72] shadow-[0_4px_0_0_#e2e8f0]"
                     />
                 </div>
 
                 {/* Filter chips */}
                 <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-                    {/* Permanent "Filters" chip — always primary tactile per Stitch */}
-                    <button
-                        className="flex-none flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-white font-bold text-[13px] border-2 border-primary active:translate-y-1"
-                        style={{ boxShadow: '0 4px 0 0 #a10038' }}
-                        onMouseDown={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(4px)'; }}
-                        onMouseUp={e => { e.currentTarget.style.boxShadow = '0 4px 0 0 #a10038'; e.currentTarget.style.transform = ''; }}
-                        onTouchStart={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(4px)'; }}
-                        onTouchEnd={e => { e.currentTarget.style.boxShadow = '0 4px 0 0 #a10038'; e.currentTarget.style.transform = ''; }}
-                    >
-                        <span className="material-symbols-outlined text-[18px]">tune</span> Filters
-                    </button>
                     {CHIPS.map(c => (
                         <button key={c} onClick={() => toggle(c)}
                             className={`flex-none px-4 py-2 rounded-full font-bold text-[13px] border-2 transition-all active:scale-95 ${active.includes(c)
@@ -128,70 +153,69 @@ export default function SearchList() {
                 {/* Results */}
                 <div>
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-extrabold text-xl tracking-tight text-on-surface">{results.length} results nearby</h2>
-                        <button
-                            onClick={() => {
-                                setSortByDistance(prev => !prev);
-                                setResults(prev => [...prev].sort((a, b) =>
-                                    sortByDistance
-                                        ? (a.name ?? '').localeCompare(b.name ?? '')
-                                        : (a.distance ?? Infinity) - (b.distance ?? Infinity)
-                                ));
-                            }}
-                            className="flex items-center gap-1 text-tertiary font-bold text-[13px] uppercase tracking-widest hover:text-primary transition-colors"
-                        >
-                            <span className="material-symbols-outlined text-[16px]">sort</span>
-                            {sortByDistance ? 'Distance' : 'A–Z'}
-                        </button>
+                        <h2 className="font-extrabold text-xl tracking-tight text-on-surface">
+                            {loading ? 'Searching…' : `${results.length} places nearby`}
+                        </h2>
+                        {!loading && results.length > 1 && (
+                            <button
+                                onClick={() => {
+                                    setSortByDistance(prev => !prev);
+                                    setResults(prev => [...prev].sort((a, b) =>
+                                        sortByDistance
+                                            ? (a.name ?? '').localeCompare(b.name ?? '')
+                                            : (a.distance ?? Infinity) - (b.distance ?? Infinity)
+                                    ));
+                                }}
+                                className="flex items-center gap-1 text-tertiary font-bold text-[13px] uppercase tracking-widest hover:text-primary transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-[16px]">sort</span>
+                                {sortByDistance ? 'Distance' : 'A–Z'}
+                            </button>
+                        )}
                     </div>
 
                     <div className="space-y-4">
                         {loading ? (
-                            <div className="text-center py-10">
-                                <span className="material-symbols-outlined animate-spin text-primary text-4xl">sync</span>
+                            <div className="text-center py-16">
+                                <span className="material-symbols-outlined animate-spin text-primary text-5xl">sync</span>
+                                <p className="mt-3 font-bold text-on-surface-variant">Finding places near you…</p>
                             </div>
                         ) : results.length === 0 ? (
                             <div className="text-center py-10 bg-white rounded-xl border-2 border-outline-variant p-6">
                                 <span className="material-symbols-outlined text-4xl text-on-surface-variant mb-2">location_off</span>
-                                <h3 className="font-extrabold text-lg text-on-surface">No locations found</h3>
-                                <p className="text-sm font-medium text-slate-500">Try adjusting your filters or search query.</p>
+                                <h3 className="font-extrabold text-lg text-on-surface">No places found</h3>
+                                <p className="text-sm font-medium text-slate-500 mt-1">Try removing a filter or expanding your search.</p>
                             </div>
                         ) : (
                             results.map(r => (
-                                <div key={r.id} onClick={() => navigate(`/app/details/${r.id}`)}
-                                    className="bg-white rounded-lg border-2 border-outline-variant p-5 shadow-card hover:border-primary transition-all cursor-pointer">
-                                    <div className="flex gap-5">
-                                        <div className="w-24 h-24 rounded-lg bg-surface-container flex-none overflow-hidden border-2 border-outline-variant/30 flex items-center justify-center text-4xl">
-                                            {r.type === 'pad_machine' ? '💧' : '🚻'}
+                                <div key={r.id}
+                                    onClick={() => r.osm ? navigate('/app/add-location', { state: { prefill: r } }) : navigate(`/app/details/${r.id}`)}
+                                    className="bg-white rounded-xl border-2 border-outline-variant p-4 shadow-card hover:border-primary transition-all cursor-pointer active:scale-[0.98]">
+                                    <div className="flex gap-4">
+                                        <div className="w-16 h-16 rounded-xl bg-surface-container flex-none flex items-center justify-center text-3xl border border-outline-variant/30">
+                                            {TYPE_ICONS[r.type] ?? '📍'}
                                         </div>
-                                        <div className="flex-1 space-y-2">
-                                            <div className="flex justify-between items-start">
-                                                <h3 className="font-extrabold text-[17px] leading-tight text-on-surface">{r.name}</h3>
-                                                <div className="flex items-center gap-1 bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-md font-bold text-[13px]">
-                                                    <span className="material-symbols-outlined text-[14px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                                    {(r.avgRating || 0).toFixed(1)}
-                                                </div>
+                                        <div className="flex-1 min-w-0 space-y-1">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <h3 className="font-extrabold text-[16px] leading-tight text-on-surface truncate">{r.name}</h3>
+                                                {r.avgRating > 0 && (
+                                                    <div className="flex items-center gap-1 bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-md font-bold text-[12px] shrink-0">
+                                                        <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                                        {r.avgRating.toFixed(1)}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <p className="text-on-surface-variant text-[13px] font-medium flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-[14px] text-tertiary">location_on</span>
-                                                {r.distance ? r.distance.toFixed(1) + 'km' : ''} · {r.address || 'Navigation available'}
+                                            <p className="text-on-surface-variant text-[12px] font-medium flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[13px] text-tertiary">location_on</span>
+                                                {r.distance != null ? r.distance.toFixed(2) + ' km away' : ''}
+                                                {r.address ? ` · ${r.address}` : ''}
                                             </p>
-                                            <div className="flex flex-wrap gap-2 pt-1">
-                                                {r.hasPads && (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-secondary-fixed text-on-secondary-fixed text-[11px] font-bold uppercase tracking-wider rounded-full border border-outline-variant/30">
-                                                        Has Pads
-                                                    </span>
-                                                )}
-                                                {r.isFree && (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed text-[11px] font-bold uppercase tracking-wider rounded-full border border-outline-variant/30">
-                                                        Free
-                                                    </span>
-                                                )}
-                                                {r.is24x7 && (
-                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-700 text-[11px] font-bold uppercase tracking-wider rounded-full border border-outline-variant/30">
-                                                        24×7
-                                                    </span>
-                                                )}
+                                            <div className="flex flex-wrap gap-1.5 pt-1">
+                                                {r.osm && <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full border border-blue-100">OSM</span>}
+                                                {r.hasPads && <span className="px-2 py-0.5 bg-pink-50 text-pink-600 text-[10px] font-bold rounded-full border border-pink-100">🩸 Has Pads</span>}
+                                                {r.isFree && <span className="px-2 py-0.5 bg-green-50 text-green-600 text-[10px] font-bold rounded-full border border-green-100">Free</span>}
+                                                {r.is24x7 && <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-bold rounded-full border border-amber-100">24×7</span>}
+                                                <span className="px-2 py-0.5 bg-surface-container text-on-surface-variant text-[10px] font-bold rounded-full capitalize">{r.type?.replace('_', ' ')}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -200,19 +224,21 @@ export default function SearchList() {
                         )}
                     </div>
 
-                    {/* Gamification */}
-                    <div className="mt-6 bg-primary-fixed/30 rounded-lg p-5 border-2 border-dashed border-primary/30 flex items-center justify-between">
-                        <div>
-                            <h4 className="font-extrabold text-primary text-[17px]">Daily Discovery</h4>
-                            <p className="text-on-surface-variant text-[13px] font-medium">Find 2 more to earn 50 LooCoins!</p>
+                    {/* Gamification nudge */}
+                    {!loading && (
+                        <div className="mt-6 bg-primary-fixed/30 rounded-xl p-5 border-2 border-dashed border-primary/30 flex items-center justify-between">
+                            <div>
+                                <h4 className="font-extrabold text-primary text-[17px]">Daily Discovery</h4>
+                                <p className="text-on-surface-variant text-[13px] font-medium">Spot a missing place? Add it and earn 50 LooPoints!</p>
+                            </div>
+                            <button
+                                onClick={() => navigate('/app/add-location')}
+                                className="ml-4 shrink-0 w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-md"
+                            >
+                                <span className="material-symbols-outlined">add_location_alt</span>
+                            </button>
                         </div>
-                        <div className="relative w-14 h-14 flex items-center justify-center">
-                            <svg className="w-full h-full -rotate-90">
-                                <circle cx="28" cy="28" r="24" fill="transparent" stroke="#ff8fa7" strokeWidth="5" strokeDasharray="150" strokeDashoffset="100" />
-                            </svg>
-                            <span className="absolute font-black text-primary text-sm">1/3</span>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </main>
             <BottomNav />

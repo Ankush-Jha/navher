@@ -59,9 +59,23 @@ export function predictNextPeriod(cycleLogs) {
         .map((l) => new Date(l.date))
         .sort((a, b) => a - b);
 
-    if (starts.length < 2) return null;
+    if (starts.length === 0) return null;
 
-    // Average cycle length from last 3 periods
+    // With only 1 log, use standard 28-day cycle as baseline prediction
+    if (starts.length === 1) {
+        const lastStart = starts[0];
+        const nextStart = new Date(lastStart.getTime() + 28 * 24 * 60 * 60 * 1000);
+        return {
+            avgCycleLength: 28,
+            nextPeriodDate: nextStart.toISOString().split("T")[0],
+            ovulationDate: new Date(lastStart.getTime() + 14 * 24 * 60 * 60 * 1000)
+                .toISOString()
+                .split("T")[0],
+            estimated: true,
+        };
+    }
+
+    // Average cycle length from last 3 periods (need ≥ 2 logs)
     const recent = starts.slice(-3);
     const gaps = [];
     for (let i = 1; i < recent.length; i++) {

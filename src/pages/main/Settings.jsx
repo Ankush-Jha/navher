@@ -5,13 +5,14 @@ import { useAppStore } from '../../store';
 import { getUserSettings, updateUserSettings, softDeleteUser } from '../../services/userService';
 import { auth } from '../../lib/firebase';
 import TopBar from '../../components/TopBar';
+import toast from 'react-hot-toast';
 
 const SECTIONS = [
     {
         title: 'Account',
         rows: [
-            { icon: 'person', label: 'Edit Profile', sub: 'Name, avatar, phone', nav: true },
-            { icon: 'location_on', label: 'My Locations', sub: '7 added', nav: true },
+            { icon: 'person', label: 'Edit Profile', sub: 'Name, avatar, phone', nav: true, route: '/auth/setup' },
+            { icon: 'location_on', label: 'My Locations', sub: 'Places you added', nav: true, route: '/app/search' },
         ],
     },
     {
@@ -26,15 +27,15 @@ const SECTIONS = [
         title: 'Safety',
         rows: [
             { icon: 'share_location', label: 'Share Live Location', sub: 'During SOS broadcast', toggle: true, def: true },
-            { icon: 'contact_emergency', label: 'Emergency Contact', sub: 'Not set', nav: true },
+            { icon: 'contact_emergency', label: 'Emergency Contact', sub: 'Tap to set up', nav: true, action: 'emergency_contact' },
         ],
     },
     {
         title: 'About',
         rows: [
-            { icon: 'info', label: 'About NavHer', sub: 'v1.0.0', nav: true },
-            { icon: 'privacy_tip', label: 'Privacy Policy', sub: '', nav: true },
-            { icon: 'help', label: 'Help & Support', sub: '', nav: true },
+            { icon: 'info', label: 'About NavHer', sub: 'v1.0.0', nav: true, action: 'about' },
+            { icon: 'privacy_tip', label: 'Privacy Policy', sub: '', nav: true, action: 'privacy' },
+            { icon: 'help', label: 'Help & Support', sub: '', nav: true, action: 'help' },
         ],
     },
 ];
@@ -114,28 +115,44 @@ export default function Settings() {
                     <div key={sec.title}>
                         <p className="section-label mb-2 px-1">{sec.title}</p>
                         <div className="notion-card shadow-card overflow-hidden">
-                            {sec.rows.map((row, idx) => (
-                                <div
-                                    key={row.label}
-                                    className={`flex items-center gap-4 p-4 ${idx < sec.rows.length - 1 ? 'border-b border-slate-50' : ''}`}
-                                >
-                                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0">
-                                        <span className="material-symbols-outlined fill text-slate-500 text-[20px]">{row.icon}</span>
+                            {sec.rows.map((row, idx) => {
+                                const handleRowClick = () => {
+                                    if (row.route) { navigate(row.route); return; }
+                                    if (row.action === 'emergency_contact') {
+                                        const num = window.prompt('Enter emergency contact number:');
+                                        if (num && num.trim()) {
+                                            toast.success(`Emergency contact saved: ${num.trim()}`);
+                                        }
+                                        return;
+                                    }
+                                    if (row.action === 'about') { toast('NavHer v1.0.0 — Made with 💗 for women\'s safety.\nBy Team NavHer', { duration: 4000 }); return; }
+                                    if (row.action === 'privacy') { toast('Your data is encrypted and never shared with third parties.', { icon: '🔒', duration: 4000 }); return; }
+                                    if (row.action === 'help') { toast('Email us at help@navher.app or call 112 for emergencies.', { icon: '📧', duration: 4000 }); return; }
+                                };
+                                return (
+                                    <div
+                                        key={row.label}
+                                        onClick={row.nav ? handleRowClick : undefined}
+                                        className={`flex items-center gap-4 p-4 ${idx < sec.rows.length - 1 ? 'border-b border-slate-50' : ''} ${row.nav ? 'cursor-pointer active:bg-slate-50 transition-colors' : ''}`}
+                                    >
+                                        <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined fill text-slate-500 text-[20px]">{row.icon}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-extrabold text-slate-800 text-sm">{row.label}</p>
+                                            {row.sub && <p className="text-xs text-slate-400 font-semibold mt-0.5">{row.sub}</p>}
+                                        </div>
+                                        {row.toggle ? (
+                                            <Toggle
+                                                on={toggles[row.label]}
+                                                onToggle={() => handleToggle(row.label)}
+                                            />
+                                        ) : (
+                                            <span className="material-symbols-outlined text-slate-300">chevron_right</span>
+                                        )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-extrabold text-slate-800 text-sm">{row.label}</p>
-                                        {row.sub && <p className="text-xs text-slate-400 font-semibold mt-0.5">{row.sub}</p>}
-                                    </div>
-                                    {row.toggle ? (
-                                        <Toggle
-                                            on={toggles[row.label]}
-                                            onToggle={() => handleToggle(row.label)}
-                                        />
-                                    ) : (
-                                        <span className="material-symbols-outlined text-slate-300">chevron_right</span>
-                                    )}
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 ))}

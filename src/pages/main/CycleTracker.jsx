@@ -20,18 +20,23 @@ export default function CycleTracker() {
     const [loading, setLoading] = useState(true);
     const [logging, setLogging] = useState(false);
     const [logMessage, setLogMessage] = useState('');
+    const [monthOffset, setMonthOffset] = useState(0);
 
     // Current month display
     const now = new Date();
-    const monthName = now.toLocaleString('default', { month: 'long', year: 'numeric' });
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const todayDay = now.getDate();
+    const viewDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const monthName = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const firstDay = viewDate.getDay();
+    const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+    const todayDay = (monthOffset === 0) ? now.getDate() : -1; // only highlight today in current month
 
     useEffect(() => {
         const uid = auth.currentUser?.uid;
         if (!uid) { setLoading(false); return; }
-        getCurrentCycleStatus(uid).then(setCycleStatus).catch(console.error).finally(() => setLoading(false));
+        Promise.race([
+            getCurrentCycleStatus(uid),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+        ]).then(setCycleStatus).catch((err) => console.warn('Cycle status unavailable:', err.message)).finally(() => setLoading(false));
     }, []);
 
     const handleLogPeriodStart = async () => {
@@ -48,6 +53,25 @@ export default function CycleTracker() {
         } catch (err) {
             console.error('Cycle log error:', err);
             toast.error('Could not log period. Please try again.');
+        } finally {
+            setLogging(false);
+        }
+    };
+
+    const handleLogPeriodEnd = async () => {
+        setLogging(true);
+        setLogMessage('');
+        try {
+            const uid = auth.currentUser?.uid;
+            if (!uid) { toast.error('Please log in.'); return; }
+            const today = now.toISOString().split('T')[0];
+            await logCycleDay({ userId: uid, date: today, type: 'period_end', flow: 'none' });
+            setLogMessage('✅ Period end logged! Predictions updated.');
+            const updated = await getCurrentCycleStatus(uid);
+            setCycleStatus(updated);
+        } catch (err) {
+            console.error('Cycle log error:', err);
+            toast.error('Could not log period end. Please try again.');
         } finally {
             setLogging(false);
         }
@@ -113,7 +137,13 @@ export default function CycleTracker() {
                 {/* Calendar */}
                 <section className="bg-white rounded-lg p-6 border-2 border-zinc-100 shadow-sm">
                     <div className="flex items-center justify-between mb-6">
+                        <button onClick={() => setMonthOffset(p => p - 1)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-100 active:scale-90 transition-all">
+                            <span className="material-symbols-outlined text-zinc-500">chevron_left</span>
+                        </button>
                         <h2 className="font-headline font-extrabold text-xl">{monthName}</h2>
+                        <button onClick={() => setMonthOffset(p => p + 1)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-zinc-100 active:scale-90 transition-all">
+                            <span className="material-symbols-outlined text-zinc-500">chevron_right</span>
+                        </button>
                     </div>
                     {/* Day headers */}
                     <div className="grid grid-cols-7 mb-4">
@@ -188,23 +218,32 @@ export default function CycleTracker() {
                 )}
 
                 {/* Quick Actions */}
-                <section className="grid grid-cols-2 gap-4">
+                <section className="grid grid-cols-3 gap-3">
                     <button
                         onClick={handleLogPeriodStart}
                         disabled={logging}
-                        className="bg-primary text-white font-headline font-extrabold p-5 rounded-lg text-center flex flex-col items-center gap-2 transition-all active:translate-y-1 disabled:opacity-60"
+                        className="bg-primary text-white font-headline font-extrabold p-4 rounded-lg text-center flex flex-col items-center gap-2 transition-all active:translate-y-1 disabled:opacity-60"
                         style={{ boxShadow: '0 4px 0 0 #d33c5e' }}
                     >
-                        <span className="material-symbols-outlined text-3xl">water_drop</span>
-                        <span>{logging ? 'Logging…' : 'Log Period Start'}</span>
+                        <span className="material-symbols-outlined text-2xl">water_drop</span>
+                        <span className="text-xs">{logging ? 'Logging…' : 'Period Start'}</span>
+                    </button>
+                    <button
+                        onClick={handleLogPeriodEnd}
+                        disabled={logging}
+                        className="bg-amber-500 text-white font-headline font-extrabold p-4 rounded-lg text-center flex flex-col items-center gap-2 transition-all active:translate-y-1 disabled:opacity-60"
+                        style={{ boxShadow: '0 4px 0 0 #b45309' }}
+                    >
+                        <span className="material-symbols-outlined text-2xl">stop_circle</span>
+                        <span className="text-xs">{logging ? 'Logging…' : 'Period End'}</span>
                     </button>
                     <button
                         onClick={() => navigate('/app/log-symptoms')}
-                        className="text-white font-headline font-extrabold p-5 rounded-lg text-center flex flex-col items-center gap-2 transition-all"
+                        className="text-white font-headline font-extrabold p-4 rounded-lg text-center flex flex-col items-center gap-2 transition-all"
                         style={{ backgroundColor: '#00C4B4', boxShadow: '0 4px 0 0 #008f83' }}
                     >
-                        <span className="material-symbols-outlined text-3xl">edit_note</span>
-                        <span>Log Symptoms</span>
+                        <span className="material-symbols-outlined text-2xl">edit_note</span>
+                        <span className="text-xs">Log Symptoms</span>
                     </button>
                 </section>
 

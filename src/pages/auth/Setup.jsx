@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TactileButton from '../../components/TactileButton';
 import { updateUserDisplayName } from '../../lib/authService';
-import { updateUserProfile } from '../../services/userService';
+import { updateUserProfile, getUserProfile } from '../../services/userService';
 import { useAppStore } from '../../store';
 import { auth } from '../../lib/firebase';
 import toast from 'react-hot-toast';
@@ -17,25 +17,37 @@ export default function Setup() {
     const [loading, setLoading] = useState(false);
     const setUser = useAppStore((s) => s.setUser);
 
+    // If user already has a profile (returning user who landed here by mistake),
+    // skip setup and go straight to the app
+    useEffect(() => {
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        getUserProfile(uid).then((profile) => {
+            if (profile?.name) {
+                navigate('/app/map', { replace: true });
+            }
+        }).catch(() => { }); // fail silently — just show the setup form
+    }, [navigate]);
+
     const handleFinish = async () => {
         setLoading(true);
-        try {
-            const uid = auth.currentUser?.uid;
-            if (uid) {
-                // Save name + avatar to Firestore
-                await updateUserProfile(uid, { name, avatar });
-                // Also set Firebase display name
-                await updateUserDisplayName(name);
-            }
-            // Merge with existing store state to preserve foxPoints/email/etc.
-            setUser(prev => ({ ...(prev || {}), name, avatar }));
-            navigate('/app/map');
-        } catch (err) {
-            console.error('Setup error:', err);
-            toast.error('Failed to save profile. Please try again.');
-        } finally {
-            setLoading(false);
+        // Update store immediately so the UI reflects changes
+        setUser(prev => ({ ...(prev || {}), name, avatar }));
+
+        const uid = auth.currentUser?.uid;
+        if (uid) {
+            // Fire-and-forget — save to Firestore in background (3s timeout)
+            Promise.race([
+                Promise.all([
+                    updateUserProfile(uid, { name, avatar }),
+                    updateUserDisplayName(name),
+                ]),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+            ]).catch(err => console.warn('Profile save deferred:', err.message));
         }
+
+        // Navigate instantly — don't wait for Firestore
+        navigate('/app/map');
     };
 
     return (

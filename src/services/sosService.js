@@ -4,6 +4,7 @@ import {
     doc,
     addDoc,
     getDoc,
+    getDocs,
     updateDoc,
     onSnapshot,
     query,
@@ -62,6 +63,24 @@ export async function cancelSOS(sosId) {
     await updateDoc(doc(db, "sos_alerts", sosId), {
         status: "cancelled",
         resolvedAt: serverTimestamp(),
+    });
+}
+
+// ─── Get a single SOS alert ───────────────────────────────────────────────────
+
+export async function getSOSAlert(sosId) {
+    const snap = await getDoc(doc(db, "sos_alerts", sosId));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() };
+}
+
+// ─── Real-time listener for a single SOS alert ──────────────────────────────
+
+export function listenToSOSAlert(sosId, callback) {
+    return onSnapshot(doc(db, "sos_alerts", sosId), (snap) => {
+        if (snap.exists()) {
+            callback({ id: snap.id, ...snap.data() });
+        }
     });
 }
 

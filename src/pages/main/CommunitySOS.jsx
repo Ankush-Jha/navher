@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import BottomNav from '../../components/BottomNav';
 import { triggerSOS, cancelSOS } from '../../services/sosService';
 import { useAppStore } from '../../store';
 import { auth } from '../../lib/firebase';
@@ -134,14 +135,14 @@ export default function CommunitySOS() {
                 </div>
 
                 {/* SOS Core Area */}
-                <div className="relative flex flex-col items-center justify-center py-10 space-y-8 overflow-hidden">
-                    {/* Pulsing Rings */}
-                    <div className="absolute inset-0 flex items-center justify-center -z-10 pointer-events-none">
+                <div className="relative flex flex-col items-center justify-center py-10 space-y-8">
+                    {/* Pulsing Rings — behind everything */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="absolute w-64 h-64 bg-primary/20 rounded-full sos-ring-1" />
                         <div className="absolute w-80 h-80 bg-primary/10 rounded-full sos-ring-2" />
                     </div>
 
-                    <div className="flex flex-col items-center gap-6">
+                    <div className="relative z-10 flex flex-col items-center gap-6">
                         {/* Main SOS Button */}
                         {!sosActive ? (
                             <button
@@ -170,7 +171,7 @@ export default function CommunitySOS() {
                                 <>
                                     <p className="text-on-surface font-bold text-lg mb-1">🚨 Alert Sent — Searching...</p>
                                     <p className="text-primary font-extrabold text-2xl tracking-tighter">00:{String(countdown).padStart(2, '0')}</p>
-                                    <button onClick={() => navigate('/app/sos-chat', { state: { sosId } })} className="mt-3 px-6 py-2 bg-secondary text-white font-bold rounded-full text-sm">
+                                    <button onClick={() => navigate(`/app/sos-chat?sosId=${sosId}`)} className="mt-3 px-6 py-2 bg-secondary text-white font-bold rounded-full text-sm">
                                         Open Chat with Helpers →
                                     </button>
                                 </>
@@ -233,36 +234,7 @@ export default function CommunitySOS() {
                 </button>
             </main>
 
-            {/* Bottom Nav — SOS page has its own tabs */}
-            <nav
-                className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-white border-t-2 border-zinc-100 rounded-t-[32px]"
-                style={{ boxShadow: '0 -4px 10px rgba(0,0,0,0.05)' }}
-            >
-                {[
-                    { icon: 'home', label: 'Home', path: '/app/map' },
-                    { icon: 'verified_user', label: 'Shield', path: null },
-                    { icon: 'emergency', label: 'SOS', path: '/app/sos', active: true, fill: true },
-                    { icon: 'group', label: 'Circle', path: null },
-                    { icon: 'person', label: 'Profile', path: '/app/profile' },
-                ].map((n) => (
-                    <a
-                        key={n.path}
-                        onClick={() => n.path ? navigate(n.path) : toast('🚧 Coming soon!')}
-                        className={`flex flex-col items-center justify-center transition-all active:scale-95 duration-200 ${n.active
-                            ? 'text-primary bg-primary/10 rounded-full px-4 py-2'
-                            : 'text-zinc-400 hover:text-primary'
-                            }`}
-                    >
-                        <span
-                            className="material-symbols-outlined"
-                            style={n.active ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                        >
-                            {n.icon}
-                        </span>
-                        <span className="font-headline font-bold text-[10px] tracking-widest uppercase mt-1">{n.label}</span>
-                    </a>
-                ))}
-            </nav>
+            <BottomNav />
         </div>
     );
 }

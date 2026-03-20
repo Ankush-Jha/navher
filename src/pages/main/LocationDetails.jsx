@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
-import { getLocation } from '../../services/locationService';
+import { getLocation, getNearbyLocations } from '../../services/locationService';
 import { getLocationReviews } from '../../services/reviewService';
+import { auth, db } from '../../lib/firebase';
+import { doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
-// Fallback pharmacies if pad machine/washroom has no pads available (keeping static for now as mock, or we can fetch them via a search).
-const PHARMACIES = [
-    { icon: 'local_pharmacy', name: 'Apollo Pharmacy', hours: 'Open until 11:00 PM', dist: '200m' },
-    { icon: 'medical_services', name: 'Wellness Forever', hours: 'Open 24 Hours', dist: '450m' },
-    { icon: 'storefront', name: 'Noble Plus', hours: 'Open until 10:00 PM', dist: '600m' },
+// Fallback pharmacies if pad machine/washroom has no pads available (will be fetched dynamically)
+const FALLBACK_PHARMACIES = [
+    { id: 'fallback-1', icon: 'local_pharmacy', name: 'Apollo Pharmacy', address: 'Open until 11:00 PM', distance: 0.2 },
+    { id: 'fallback-2', icon: 'medical_services', name: 'Wellness Forever', address: 'Open 24 Hours', distance: 0.45 },
+    { id: 'fallback-3', icon: 'storefront', name: 'Noble Plus', address: 'Open until 10:00 PM', distance: 0.6 },
 ];
 
 export default function LocationDetails() {
@@ -19,6 +21,7 @@ export default function LocationDetails() {
 
     const [location, setLocation] = useState(null);
     const [reviews, setReviews] = useState([]);
+    const [nearbyPharmacies, setNearbyPharmacies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -37,6 +40,21 @@ export default function LocationDetails() {
                     // Fetch reviews
                     const revs = await getLocationReviews(id);
                     setReviews(revs || []);
+
+                    // Fetch nearby pharmacies
+                    try {
+                        let pharms = await getNearbyLocations({ lat: locData.lat, lng: locData.lng, radiusKm: 3, filters: { type: 'pharmacy' } });
+                        // Exclude current location
+                        pharms = pharms.filter(p => p.id !== locData.id);
+                        if (pharms.length > 0) {
+                            setNearbyPharmacies(pharms.slice(0, 3));
+                        } else {
+                            setNearbyPharmacies(FALLBACK_PHARMACIES); // fallback if none found in db
+                        }
+                    } catch (err) {
+                        console.error("Failed to fetch nearby pharmacies:", err);
+                        setNearbyPharmacies(FALLBACK_PHARMACIES);
+                    }
                 } else {
                     setError('Location not found.');
                 }
@@ -48,6 +66,15 @@ export default function LocationDetails() {
             }
         }
         fetchData();
+    }, [id]);
+
+    // Check if user has saved this location
+    useEffect(() => {
+        const uid = auth.currentUser?.uid;
+        if (!uid || !id) return;
+        getDoc(doc(db, 'users', uid, 'savedLocations', id))
+            .then(snap => { if (snap.exists()) setSaved(true); })
+            .catch(() => { });
     }, [id]);
 
     if (loading) {
@@ -182,7 +209,7 @@ export default function LocationDetails() {
                                 </div>
                             </div>
                             <button
-                                onClick={() => toast('📝 Thanks! Tap the rating button to submit an update.')}
+                                onClick={() => navigate(`/app/rate/${id}`, { state: { name: location.name } })}
                                 className="bg-surface-container-high px-3 py-2 rounded-full text-xs font-bold tracking-wider uppercase text-on-surface-variant hover:bg-outline-variant transition-colors"
                             >
                                 Report Update
@@ -241,9 +268,19 @@ export default function LocationDetails() {
                             Rate & Review
                         </Link>
                         <button
-                            onClick={() => {
-                                setSaved(s => !s);
-                                toast.success(saved ? 'Removed from saved locations' : '📍 Location saved!');
+                            onClick={async () => {
+                                const uid = auth.currentUser?.uid;
+                                if (!uid) { toast.error('Please log in to save.'); return; }
+                                const ref = doc(db, 'users', uid, 'savedLocations', id);
+                                if (saved) {
+                                    await deleteDoc(ref).catch(() => { });
+                                    setSaved(false);
+                                    toast.success('Removed from saved locations');
+                                } else {
+                                    await setDoc(ref, { locationId: id, name: location?.name || '', savedAt: new Date() }).catch(() => { });
+                                    setSaved(true);
+                                    toast.success('📍 Location saved!');
+                                }
                             }}
                             className="flex items-center justify-center gap-2 py-3 border-2 border-outline rounded-full font-bold text-on-surface-variant bg-white hover:bg-surface-container transition-colors active:scale-95"
                         >
@@ -343,7 +380,7 @@ export default function LocationDetails() {
                                         </div>
                                         <span className="text-[11px] text-on-surface-variant">{formatTimeAgo(r.createdAt)}</span>
                                     </div>
-                                    <p className="text-sm text-on-surface-variant">{r.text}</p>
+                                    <p className="text-sm text-on-surface-variant">{r.comment || r.text}</p>
                                 </div>
                             ))
                         )}
@@ -351,30 +388,35 @@ export default function LocationDetails() {
                 </section>
 
                 {/* Nearby Pharmacy Carousel */}
-                <section className="pl-4 py-4 overflow-hidden">
-                    <h3 className="font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-4 pr-4">
-                        Nearby Pharmacy Alternatives
-                    </h3>
-                    <div className="flex gap-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        {PHARMACIES.map((p) => (
-                            <div key={p.name} className="min-w-[200px] bg-white border-2 border-gray-100 p-4 rounded-lg shadow-sm flex flex-col gap-3">
-                                <div className="flex justify-between items-start">
-                                    <div className="w-10 h-10 bg-surface-container rounded-lg flex items-center justify-center text-primary">
-                                        <span className="material-symbols-outlined">{p.icon}</span>
+                {nearbyPharmacies.length > 0 && (
+                    <section className="pl-4 py-4 overflow-hidden">
+                        <h3 className="font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-4 pr-4">
+                            Nearby Pharmacies <span className="text-outline font-medium normal-case">(Example Suggestions)</span>
+                        </h3>
+                        <div className="flex gap-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {nearbyPharmacies.map((p) => (
+                                <div key={p.id || p.name} className="min-w-[200px] bg-white border-2 border-gray-100 p-4 rounded-lg shadow-sm flex flex-col gap-3">
+                                    <div className="flex justify-between items-start">
+                                        <div className="w-10 h-10 bg-surface-container rounded-lg flex items-center justify-center text-primary">
+                                            <span className="material-symbols-outlined">{p.icon || 'local_pharmacy'}</span>
+                                        </div>
+                                        <span className="text-[10px] font-bold bg-gray-100 px-2 py-1 rounded">{(p.distance * 1000).toFixed(0)}m</span>
                                     </div>
-                                    <span className="text-[10px] font-bold bg-gray-100 px-2 py-1 rounded">{p.dist}</span>
+                                    <div>
+                                        <h4 className="font-bold text-sm truncate">{p.name}</h4>
+                                        <p className="text-[10px] text-on-surface-variant truncate">{p.address || 'Address not available'}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => p.phone ? window.open(`tel:${p.phone}`) : toast('No phone number available')}
+                                        className="w-full bg-secondary/10 text-secondary font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1 active:bg-secondary/20 transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">call</span> {p.phone ? 'Call' : 'Visit'}
+                                    </button>
                                 </div>
-                                <div>
-                                    <h4 className="font-bold text-sm">{p.name}</h4>
-                                    <p className="text-[10px] text-on-surface-variant">{p.hours}</p>
-                                </div>
-                                <button className="w-full bg-secondary/10 text-secondary font-bold py-2 rounded-lg text-xs flex items-center justify-center gap-1">
-                                    <span className="material-symbols-outlined text-sm">call</span> Call
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </section>
+                            ))}
+                        </div>
+                    </section>
+                )}
             </main>
 
             <BottomNav />

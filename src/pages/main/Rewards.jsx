@@ -1,12 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import Avatar from '../../components/Avatar';
 import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { useAppStore } from '../../store';
+import { collection, getDocs } from 'firebase/firestore';
+import { db, auth } from '../../lib/firebase';
+import { awardPoints } from '../../services/userService';
+import toast from 'react-hot-toast';
 
-const VOUCHERS = [
-    { icon: 'shopping_cart', bg: 'bg-surface-container', color: 'text-primary', title: '₹50 Blinkit Off', sub: 'Grocery delivery', pts: '100 pts' },
-    { icon: 'bolt', bg: 'bg-tertiary-container', color: 'text-tertiary', title: '₹100 Zepto Off', sub: '10-min delivery', pts: '200 pts' },
-    { icon: 'medical_services', bg: 'bg-secondary-container', color: 'text-secondary', title: 'Free Sanitary Pad', sub: 'Health & Hygiene', pts: '50 pts' },
+const DEFAULT_VOUCHERS = [
+    { icon: 'shopping_cart', bg: 'bg-surface-container', color: 'text-primary', title: '₹50 Blinkit Off', sub: 'Grocery delivery', pointsCost: 100, pts: '100 pts' },
+    { icon: 'bolt', bg: 'bg-tertiary-container', color: 'text-tertiary', title: '₹100 Zepto Off', sub: '10-min delivery', pointsCost: 200, pts: '200 pts' },
+    { icon: 'medical_services', bg: 'bg-secondary-container', color: 'text-secondary', title: 'Free Sanitary Pad', sub: 'Health & Hygiene', pointsCost: 50, pts: '50 pts' },
 ];
 
 const ALL_BADGES = [
@@ -19,8 +24,52 @@ const ALL_BADGES = [
 export default function Rewards() {
     const navigate = useNavigate();
     const { user } = useAppStore();
+    const [vouchers, setVouchers] = useState([]);
+    const [loadingVouchers, setLoadingVouchers] = useState(true);
+
+    useEffect(() => {
+        async function fetchRewards() {
+            try {
+                const snap = await Promise.race([
+                    getDocs(collection(db, 'vouchers')),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+                ]);
+                if (!snap.empty) {
+                    setVouchers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                } else {
+                    setVouchers(DEFAULT_VOUCHERS);
+                }
+            } catch (err) {
+                console.warn('Vouchers fallback to defaults:', err.message);
+                setVouchers(DEFAULT_VOUCHERS);
+            } finally {
+                setLoadingVouchers(false);
+            }
+        }
+        fetchRewards();
+    }, []);
 
     const xpPercent = Math.min(100, Math.max(0, (user.xp / Math.max(1, user.xpNext)) * 100));
+    const [redeemed, setRedeemed] = useState({});
+
+    const handleRedeem = async (v) => {
+        const cost = v.pointsCost ?? parseInt(v.pts, 10);
+        if (isNaN(cost)) { toast.error('Invalid voucher.'); return; }
+        if ((user.foxPoints ?? 0) < cost) {
+            toast.error(`You need ${cost} LooPoints. You have ${user.foxPoints ?? 0}.`);
+            return;
+        }
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+        try {
+            await awardPoints(uid, -cost, 'voucher_redeemed', v.id || v.title);
+            setRedeemed(r => ({ ...r, [v.title]: true }));
+            toast.success(`🎉 Redeemed! Your code: ${v.code ?? 'NAVHER'}`, { duration: 6000 });
+        } catch (err) {
+            console.error('Redeem error:', err);
+            toast.error('Redemption failed. Please try again.');
+        }
+    };
 
     return (
         <div className="flex flex-col min-h-dvh bg-surface-container-low font-body text-on-surface pb-32">
@@ -50,7 +99,7 @@ export default function Rewards() {
                             <h2 className="text-xl font-extrabold text-on-surface">Level {user.level}: {user.levelName}</h2>
                         </div>
                         <div className="bg-secondary-container p-2 rounded-full flex items-center justify-center w-12 h-12">
-                            <span className="text-3xl">{user.avatar || '🦊'}</span>
+                            <Avatar value={user.avatar} size="w-12 h-12" textSize="text-3xl" />
                         </div>
                     </div>
                     <div className="space-y-2">
@@ -95,7 +144,7 @@ export default function Rewards() {
                     {/* How to earn row */}
                     <div
                         className="col-span-2 flex items-center justify-between p-4 bg-surface-container rounded-lg border-2 border-dashed border-primary/30 cursor-pointer group"
-                        onClick={() => { }}
+                        onClick={() => toast('💡 Add locations (+15), write reviews (+25), log symptoms (+10), help SOS (+50)!', { icon: '⭐', duration: 5000 })}
                     >
                         <div className="flex items-center gap-3">
                             <span className="material-symbols-outlined text-primary">stars</span>
@@ -110,29 +159,45 @@ export default function Rewards() {
                 {/* Redeem Vouchers */}
                 <section className="space-y-4">
                     <h4 className="font-extrabold text-xl text-on-surface">Redeem Vouchers</h4>
-                    <div className="flex flex-col gap-3">
-                        {VOUCHERS.map((v) => (
-                            <div
-                                key={v.title}
-                                className="flex items-center justify-between p-4 bg-white border-2 border-outline-variant rounded-lg active:border-primary transition-colors cursor-pointer"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 ${v.bg} rounded-full flex items-center justify-center ${v.color}`}>
-                                        <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                            {v.icon}
-                                        </span>
+                    {loadingVouchers ? (
+                        <div className="flex justify-center p-4">
+                            <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            {vouchers.map((v) => (
+                                <div
+                                    key={v.title}
+                                    className={`flex items-center justify-between p-4 bg-white border-2 rounded-lg transition-colors ${redeemed[v.title] ? 'border-green-200 bg-green-50' : 'border-outline-variant'
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 ${v.bg} rounded-full flex items-center justify-center ${v.color}`}>
+                                            <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                                {v.icon}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="font-extrabold text-on-surface">{v.title}</p>
+                                            <p className="text-sm text-on-surface-variant font-medium">{v.sub}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-extrabold text-on-surface">{v.title}</p>
-                                        <p className="text-sm text-on-surface-variant font-medium">{v.sub}</p>
-                                    </div>
+                                    <button
+                                        onClick={() => handleRedeem(v)}
+                                        disabled={redeemed[v.title]}
+                                        className={`px-3 py-1.5 rounded-full font-bold text-sm whitespace-nowrap transition-all ${redeemed[v.title]
+                                            ? 'bg-green-100 text-green-700'
+                                            : (user.foxPoints ?? 0) >= (v.pointsCost ?? 999)
+                                                ? 'bg-primary text-white active:scale-95'
+                                                : 'bg-primary-fixed text-on-primary-fixed-variant opacity-60'
+                                            }`}
+                                    >
+                                        {redeemed[v.title] ? '✓ Done' : `${v.pointsCost ?? v.pts} pts`}
+                                    </button>
                                 </div>
-                                <div className="bg-primary-fixed px-3 py-1 rounded-full text-on-primary-fixed-variant font-bold text-sm whitespace-nowrap">
-                                    {v.pts}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 {/* My Badges */}
@@ -140,7 +205,7 @@ export default function Rewards() {
                     <h4 className="font-extrabold text-xl text-on-surface">My Badges</h4>
                     <div className="flex gap-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                         {ALL_BADGES.map((b) => {
-                            const isLocked = user.badges ? !user.badges.includes(b.id) : (user.level < b.reqLevel);
+                            const isLocked = user.badges ? !user.badges.includes(b.id) : ((user.level ?? 1) < b.reqLevel);
                             return (
                                 <div
                                     key={b.label}

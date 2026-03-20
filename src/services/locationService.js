@@ -64,6 +64,7 @@ export async function getNearbyLocations({ lat, lng, radiusKm = 5, filters = {} 
     if (filters.isFree) results = results.filter((l) => l.isFree);
     if (filters.hasPads) results = results.filter((l) => l.hasPads);
     if (filters.is24x7) results = results.filter((l) => l.is24x7);
+    if (filters.type) results = results.filter((l) => l.type === filters.type);
 
     // Sort by distance
     results.sort((a, b) => a.distance - b.distance);
@@ -105,7 +106,7 @@ export async function addLocation({ type, name, lat, lng, address, addedBy }) {
         privacyScore: 0,
         avgRating: 0,
         reviewCount: 0,
-        status: "pending_review",  // requires admin approval
+        status: "active",          // immediately visible on map (MVP: trust community)
         addedBy,
         verified: false,
         amenities: [],

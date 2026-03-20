@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import TopBar from '../../components/TopBar';
 import DuoButton from '../../components/DuoButton';
-import { submitReview } from '../../services/reviewService';
+import { submitReview, getLocationReviews } from '../../services/reviewService';
 import { auth } from '../../lib/firebase';
-import { db } from '../../lib/firebase';
-import { doc, increment, updateDoc } from 'firebase/firestore';
+import { awardPoints } from '../../services/userService';
 import { useAppStore } from '../../store';
 import toast from 'react-hot-toast';
+import { useEffect } from 'react';
 
 const TAGS = ['Super Clean', 'Well Lit', 'Safe', 'No Water', 'Foul Smell', 'Has Dustbins'];
 
@@ -16,7 +16,7 @@ export default function RateReview() {
     const location = useLocation();
     const { id: locationId } = useParams();
     const locationName = location.state?.name || 'This Location';
-    const { user } = useAppStore();
+    const { user, addFoxPoints } = useAppStore();
 
     const [rating, setRating] = useState(0);
     const [safe, setSafe] = useState(null);
@@ -24,11 +24,21 @@ export default function RateReview() {
     const [comment, setComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [successMsg, setSuccessMsg] = useState('');
+    const [alreadyReviewed, setAlreadyReviewed] = useState(false);
+
+    // Check if user already reviewed this location
+    useEffect(() => {
+        const uid = auth.currentUser?.uid;
+        if (!uid || !locationId) return;
+        getLocationReviews(locationId).then(revs => {
+            if (revs?.some(r => r.userId === uid)) setAlreadyReviewed(true);
+        }).catch(() => { });
+    }, [locationId]);
 
     const toggleTag = (t) =>
         setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
-    const canSubmit = rating > 0 && !submitting;
+    const canSubmit = rating > 0 && !submitting && !alreadyReviewed;
 
     const handleSubmit = async () => {
         if (!canSubmit) return;
@@ -49,9 +59,10 @@ export default function RateReview() {
                 comment: comment.trim(),
             });
 
-            // Award +25 foxPoints in Firestore
+            // Award +25 foxPoints via proper service
             try {
-                await updateDoc(doc(db, 'users', uid), { 'rewards.totalPoints': increment(25) });
+                await awardPoints(uid, 25, 'review_submitted', locationId);
+                addFoxPoints(25);
             } catch (pointsErr) {
                 console.warn('Points update failed (non-critical):', pointsErr);
             }
@@ -81,11 +92,6 @@ export default function RateReview() {
                 {successMsg && (
                     <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 text-center">
                         <p className="font-extrabold text-green-700">{successMsg}</p>
-                    </div>
-                )}
-                {error && (
-                    <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 text-center">
-                        <p className="font-bold text-red-600">{error}</p>
                     </div>
                 )}
 
@@ -171,6 +177,12 @@ export default function RateReview() {
                     <span className="material-symbols-outlined fill text-accent-yellow text-[18px]">stars</span>
                     <span className="text-xs font-extrabold text-slate-500">Earn <span className="text-accent-yellow">+25 Points</span> for reviewing!</span>
                 </div>
+                {alreadyReviewed && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-amber-500 text-lg">info</span>
+                        <p className="text-xs font-bold text-amber-700">You've already reviewed this location.</p>
+                    </div>
+                )}
                 <DuoButton
                     color={canSubmit ? 'primary' : 'gray'}
                     disabled={!canSubmit}

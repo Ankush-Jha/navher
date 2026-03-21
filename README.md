@@ -1,11 +1,17 @@
 # 🧭 NavHer — Navigate Safely, Navigate Freely
 
-**NavHer** is a mobile-first Flutter application designed to empower women with **safe navigation, hygiene access, and wellness tools** — all in one place. Built during the **WisCon Hackathon 2026**.
+*Navigating women safely to hygiene, help, and verified public spaces.*
+
+[🔴 **Live Demo: navher-app-wiscon.web.app**](https://navher-app-wiscon.web.app)
+
+**NavHer** is a mobile-first web application designed to empower women with **safe navigation, hygiene access, and wellness tools** — all in one place. Built during the **WisCon Hackathon 2026**.
 
 ---
 
-## 🌟 Problem Statement
+## 💡 Inspiration
+We realized there is a critical gap in urban infrastructure for women. While navigation apps show the fastest route, they don't show the *safest* route. Finding clean washrooms or accessing menstrual hygiene products in emergencies is a constant struggle. We built NavHer to bring safe routing, emergency SOS, and hygiene access into a single, cohesive platform.
 
+## 🌟 Problem Statement
 Women in urban India face daily challenges — finding clean washrooms, accessing menstrual hygiene products in emergencies, tracking their period cycle, and identifying safe public spaces. NavHer brings all of these together into a single, beautifully designed app.
 
 ---
@@ -35,6 +41,93 @@ NavHer is designed for simplicity and speed during critical moments:
 5. **⭐ Community Review** — After your journey or washroom visit, you can drop a quick rating to help other women make informed decisions.
 
 *(Demo GIFs capturing full app workflows will be attached soon)*
+
+---
+
+## 🖼️ Screenshots
+
+| ![Screenshot 1](screenshots/1.png) | ![Screenshot 2](screenshots/2.png) | ![Screenshot 3](screenshots/3.png) |
+|:---:|:---:|:---:|
+| **Home & Safe Map Tracker** | **Emergency SOS Activation** | **Community Rewards** |
+
+| ![Screenshot 4](screenshots/4.png) | ![Screenshot 5](screenshots/5.png) | 
+|:---:|:---:|
+| **Emergency Pad Delivery** | **User Profile & Tracker** |
+
+---
+
+## 🏗️ Tech Stack
+
+- **Frontend:** React, Vite
+- **Styling:** Tailwind CSS
+- **Routing:** React Router DOM
+- **Backend/Database:** Firebase (Auth, Firestore)
+- **Deployment:** Firebase Hosting
+- **Icons:** Lucide React
+
+---
+
+## 📂 Project Structure
+
+```
+navher/
+├── src/
+│   ├── components/       # Reusable UI components (Navbar, Map, etc.)
+│   ├── pages/            # Main application screens (Home, SOS, Rewards)
+│   ├── App.jsx           # App entry point & routing configuration
+│   ├── index.css         # Global Tailwind styles
+│   └── main.jsx          # React DOM rendering
+├── public/               # Static assets
+├── index.html            # HTML entry point
+├── tailwind.config.js    # Tailwind configuration
+├── package.json          # Dependencies and scripts
+└── firebase.json         # Firebase hosting configuration
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh/) installed locally.
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Ankush-Jha/navher.git
+cd navher
+
+# Install dependencies using Bun
+bun install
+
+# Run the development server
+bun run dev
+```
+
+---
+
+## 🛣️ App Routes
+
+| Route | Screen |
+|---|---|
+| `/auth/*` | Onboarding, Login, and Setup screens |
+| `/app/map` | Main dashboard and Safe Spaces map |
+| `/app/list` | Search list for safe spaces |
+| `/app/emergency` | Emergency pad ordering |
+| `/app/tracker` | Cycle tracking & symptom logging |
+| `/app/rewards` | Community points & achievements |
+| `/app/sos` | Quick access to emergency contacts and services |
+| `/app/profile` | User profile and settings |
+
+---
+
+## 🚧 Challenges We Ran Into
+Integrating real-time map features while maintaining a mobile-responsive, app-like feel on the web was difficult. We also had to design a trust-first monetization strategy that ensures the app remains 100% free and safe for the end-users while being a sustainable business.
+
+## 🏆 Accomplishments That We're Proud Of
+We successfully built a complete ecosystem addressing multiple facets of women's safety and wellness. The seamless transition between SOS features, safe routing, and emergency pad delivery within a single unified interface is something we are extremely proud of designing during the hackathon.
 
 ---
 
@@ -76,95 +169,9 @@ NavHer provides contextual and non-intrusive promotions based on the user's loca
 
 ---
 
-## 🖼️ Screenshots
-
-| ![Screenshot 1](screenshots/1.png) | ![Screenshot 2](screenshots/2.png) | ![Screenshot 3](screenshots/3.png) |
-|:---:|:---:|:---:|
-| **App View** | **App View** | **App View** |
-
-| ![Screenshot 4](screenshots/4.png) | ![Screenshot 5](screenshots/5.png) | 
-|:---:|:---:|
-| **App View** | **App View** |
-
----
-
-## 🏗️ Tech Stack
-
-- **Framework:** Flutter (Dart SDK ^3.11.1)
-- **UI:** Material Design + Google Fonts + Custom Design System
-- **Packages:** `google_fonts`, `url_launcher`, `cupertino_icons`
-- **Design:** Custom app theme with dedicated color palette and reusable widgets
-
----
-
-## 📂 Project Structure
-
-```
-wc-project/
-├── loopad/                          # Main Flutter application
-│   ├── lib/
-│   │   ├── main.dart                # App entry point & route definitions
-│   │   ├── screens/
-│   │   │   ├── onboarding_screen.dart
-│   │   │   ├── home_screen.dart
-│   │   │   ├── pad_delivery_screen.dart
-│   │   │   ├── washroom_details_screen.dart
-│   │   │   ├── period_tracker_screen.dart
-│   │   │   ├── rewards_screen.dart
-│   │   │   └── safe_spaces_screen.dart
-│   │   ├── theme/                   # App colors & theme configuration
-│   │   └── widgets/                 # Reusable UI components
-│   ├── android/                     # Android platform config
-│   ├── ios/                         # iOS platform config
-│   └── web/                         # Web platform config
-├── emergency_pad_delivery_*/        # HTML prototypes for pad delivery flow
-├── loopad_home_safe_spaces_nearby/  # HTML prototype for safe spaces
-└── README.md
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Flutter SDK](https://flutter.dev/docs/get-started/install) (3.11.1+)
-- Android Studio / Xcode for emulator
-- A connected device or emulator
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/Ankush-Jha/navher.git
-cd navher
-
-# Install dependencies
-flutter pub get
-
-# Run the app
-flutter run
-```
-
----
-
-## 🛣️ App Routes
-
-| Route | Screen |
-|---|---|
-| `/onboarding` | Welcome & feature introduction |
-| `/home` | Main dashboard |
-| `/pad-delivery` | Emergency pad ordering |
-| `/washroom-details` | Washroom info & reviews |
-| `/period-tracker` | Cycle tracking & symptom logging |
-| `/rewards` | Community points & achievements |
-| `/safe-spaces` | Nearby safe locations map |
-
----
-
 ## 👥 Team
 
-Built with ❤️ at **WisCon Hackathon 2026**
+Built with ❤️ at **WisCon Hackathon 2026** by Team NavHer.
 
 ---
 

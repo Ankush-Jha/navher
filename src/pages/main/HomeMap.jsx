@@ -7,6 +7,7 @@ import Avatar from '../../components/Avatar';
 import BottomNav from '../../components/BottomNav';
 import { getNearbyLocations } from '../../services/locationService';
 import { fetchRealPOIsNearby } from '../../services/overpassService';
+import { SHARDA_CENTER, getBuiltinNearby, isNearSharda, mergeLocations } from '../../data/shardaLocations';
 import { listenToActiveSOS, respondToSOS } from '../../services/sosService';
 import { useAppStore } from '../../store';
 import toast from 'react-hot-toast';
@@ -84,22 +85,21 @@ const ORDER_LINKS = [
     { label: 'Instamart', emoji: '🛒', url: 'https://www.swiggy.com/instamart/search?query=pads', color: '#ff5200', text: '#fff' },
 ];
 
-const DELHI_CENTER = { lat: 28.6139, lng: 77.2090 };
+const DEFAULT_CENTER = SHARDA_CENTER; // Sharda University, Knowledge Park III, Greater Noida
 
 // ─── Fly to user on first position ───────────────────────────────────────────
 function FlyToUser({ pos }) {
     const map = useMap();
     useEffect(() => {
-        if (pos) map.setView([pos.lat, pos.lng], 15, { animate: true, duration: 1 });
+        if (pos) map.setView([pos.lat, pos.lng], 14, { animate: true, duration: 1 });
     }, [pos, map]);
     return null;
 }
 
 // ─── Navigate to place via Google Maps ───────────────────────────────────────
 function openNavigation(lat, lng, name) {
-    const label = encodeURIComponent(name);
-    // Tries native maps app first via geo: URI, falls back to Google Maps web
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${label}&travelmode=walking`;
+    // (destination_place_id must be a real Google place ID — passing a name breaks the route)
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
     window.open(url, '_blank');
 }
 
@@ -108,10 +108,10 @@ export default function HomeMap() {
     const { user, firebaseUser } = useAppStore();
     const myUid = firebaseUser?.uid;
     const [activeFilters, setActiveFilters] = useState([]);
-    const [locations, setLocations] = useState([]);
+    const [locations, setLocations] = useState(() => getBuiltinNearby(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng, 8));
     const [osmLocations, setOsmLocations] = useState([]);
     const [userPos, setUserPos] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // map renders instantly with built-in Sharda data
     const [osmLoading, setOsmLoading] = useState(false);
     const [sosAlerts, setSosAlerts] = useState([]);  // active SOS from OTHER users
     const [sosAlert, setSosAlert] = useState(null); // banner alert
@@ -119,40 +119,48 @@ export default function HomeMap() {
 
     // ── Geolocation + data fetch ──────────────────────────────────────────────
     useEffect(() => {
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const { latitude: lat, longitude: lng } = pos.coords;
-                setUserPos({ lat, lng });
+        let cancelled = false;
 
-                // 1. Firestore community locations
-                try {
-                    const nearby = await Promise.race([
-                        getNearbyLocations({ lat, lng, radiusKm: 5 }),
-                        new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 4000)),
-                    ]);
-                    setLocations(nearby);
-                } catch (e) { console.warn('Firestore timeout:', e.message); }
-                setLoading(false);
+        const load = async (lat, lng) => {
+            if (cancelled) return;
+            setUserPos({ lat, lng });
 
-                // 2. OSM real-world POIs (background)
-                setOsmLoading(true);
-                try {
-                    const osm = await fetchRealPOIsNearby({ lat, lng, radiusKm: 3 });
-                    setOsmLocations(osm);
-                } catch (e) { console.warn('Overpass failed:', e.message); }
-                finally { setOsmLoading(false); }
-            },
-            () => {
-                // Geolocation denied — still show Delhi POIs but warn user
-                toast('📍 Location unavailable — showing Delhi area', { icon: '⚠️', duration: 4000 });
-                setLoading(false);
-                setOsmLoading(true);
-                fetchRealPOIsNearby({ lat: DELHI_CENTER.lat, lng: DELHI_CENTER.lng, radiusKm: 3 })
-                    .then(setOsmLocations).catch(console.warn)
-                    .finally(() => setOsmLoading(false));
-            },
-            { timeout: 10000, enableHighAccuracy: true, maximumAge: 30000 }
-        );
+            // 1. Community (Firestore) + built-in Sharda locations — always has data
+            try {
+                const nearby = await getNearbyLocations({ lat, lng, radiusKm: 8 });
+                if (!cancelled) setLocations(nearby);
+            } catch (e) { console.warn('Locations load failed:', e.message); }
+
+            // 2. OSM real-world POIs (background, best effort)
+            if (cancelled) return;
+            setOsmLoading(true);
+            try {
+                const osm = await fetchRealPOIsNearby({ lat, lng, radiusKm: 3 });
+                if (!cancelled) setOsmLocations(osm);
+            } catch (e) { console.warn('Overpass failed:', e.message); }
+            finally { if (!cancelled) setOsmLoading(false); }
+        };
+
+        const useSharda = (msg) => {
+            if (msg) toast(msg, { icon: '📍', duration: 4000 });
+            load(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
+        };
+
+        if (!navigator.geolocation) {
+            useSharda('Showing Sharda University area');
+        } else {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude: lat, longitude: lng } = pos.coords;
+                    // Far from campus (e.g. judges demoing elsewhere) → show Sharda so the map isn't empty
+                    if (isNearSharda(lat, lng)) load(lat, lng);
+                    else useSharda('You are away from campus — showing Sharda University area');
+                },
+                () => useSharda('Location unavailable — showing Sharda University area'),
+                { timeout: 8000, enableHighAccuracy: false, maximumAge: 60000 }
+            );
+        }
+        return () => { cancelled = true; };
     }, []);
 
     // ── Real-time SOS listener — shows OTHER users' SOS on this device ────────
@@ -177,8 +185,7 @@ export default function HomeMap() {
 
     // ── Merge + filter ────────────────────────────────────────────────────────
     const allLocations = React.useMemo(() => {
-        const fsIds = new Set(locations.map(l => l.id));
-        let merged = [...locations, ...osmLocations.filter(l => !fsIds.has(l.id))];
+        let merged = mergeLocations(locations, osmLocations);
 
         for (const f of activeFilters) {
             if (f === 'hasPads') merged = merged.filter(l => l.hasPads);
@@ -197,7 +204,7 @@ export default function HomeMap() {
 
     const mapCenter = userPos
         ? [userPos.lat, userPos.lng]
-        : [DELHI_CENTER.lat, DELHI_CENTER.lng];
+        : [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng];
 
     return (
         <div className="flex flex-col min-h-dvh bg-surface font-body text-on-surface">

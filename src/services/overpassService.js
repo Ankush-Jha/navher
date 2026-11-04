@@ -5,8 +5,8 @@
 
 const OVERPASS_ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
-    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
 ];
 
 // ─── Safe AbortSignal (Safari compat) ────────────────────────────────────────
@@ -145,21 +145,22 @@ export async function fetchRealPOIsNearby({ lat, lng, radiusKm = 3 }) {
     const radiusM = radiusKm * 1000;
     const queryBody = buildQuery(lat, lng, radiusM);
 
+    // Overpass expects the query as a form field named `data` (a raw text/plain body
+    // is rejected with HTTP 406 by overpass-api.de). Race the mirrors: first success wins.
     let data = null;
-    for (const endpoint of OVERPASS_ENDPOINTS) {
-        try {
+    try {
+        data = await Promise.any(OVERPASS_ENDPOINTS.map(async (endpoint) => {
             const res = await fetch(endpoint, {
                 method: 'POST',
-                body: queryBody,
-                headers: { 'Content-Type': 'text/plain' },
-                signal: timeoutSignal(18000),
+                body: 'data=' + encodeURIComponent(queryBody),
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                signal: timeoutSignal(15000),
             });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            data = await res.json();
-            break; // success
-        } catch (err) {
-            console.warn(`Overpass endpoint failed (${endpoint}):`, err.message);
-        }
+            if (!res.ok) throw new Error(`${endpoint} → HTTP ${res.status}`);
+            return res.json();
+        }));
+    } catch (err) {
+        console.warn('Overpass endpoints failed:', err?.errors?.map(e => e.message) || err.message);
     }
 
     if (!data) {

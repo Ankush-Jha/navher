@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { awardPoints } from "./userService";
+import { getBuiltinNearby, getBuiltinById, mergeLocations } from "../data/shardaLocations";
 
 // ─── Haversine distance (km) ──────────────────────────────────────────────────
 
@@ -43,22 +44,31 @@ export async function getNearbyLocations({ lat, lng, radiusKm = 5, filters = {} 
     const latDelta = radiusKm / 111; // ~111 km per degree latitude
     const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
 
-    let q = query(
-        collection(db, "locations"),
-        where("lat", ">=", lat - latDelta),
-        where("lat", "<=", lat + latDelta),
-        where("status", "==", "active")
-    );
+    // Community locations from Firestore — never let a slow/blocked DB empty the map
+    let remote = [];
+    try {
+        const q = query(
+            collection(db, "locations"),
+            where("lat", ">=", lat - latDelta),
+            where("lat", "<=", lat + latDelta),
+            where("status", "==", "active")
+        );
+        const snap = await Promise.race([
+            getDocs(q),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("Firestore timeout")), 4000)),
+        ]);
+        remote = snap.docs
+            .map((d) => {
+                const data = d.data();
+                return { id: d.id, ...data, distance: haversineKm(lat, lng, data.lat, data.lng) };
+            })
+            .filter((l) => Math.abs(l.lng - lng) <= lngDelta);
+    } catch (err) {
+        console.warn("Firestore locations unavailable, using built-in Sharda data:", err.message);
+    }
 
-    const snap = await getDocs(q);
-    let results = snap.docs.map((d) => {
-        const data = d.data();
-        const distance = haversineKm(lat, lng, data.lat, data.lng);
-        return { id: d.id, ...data, distance };
-    });
-
-    // Filter by longitude (bounding box)
-    results = results.filter((l) => Math.abs(l.lng - lng) <= lngDelta);
+    // Built-in Sharda University dataset (always available)
+    let results = mergeLocations(remote, getBuiltinNearby(lat, lng, radiusKm));
 
     // Apply filters
     if (filters.isFree) results = results.filter((l) => l.isFree);
@@ -75,8 +85,15 @@ export async function getNearbyLocations({ lat, lng, radiusKm = 5, filters = {} 
 // ─── Get single location ──────────────────────────────────────────────────────
 
 export async function getLocation(locationId) {
-    const snap = await getDoc(doc(db, "locations", locationId));
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    const builtin = getBuiltinById(locationId);
+    try {
+        const snap = await getDoc(doc(db, "locations", locationId));
+        if (snap.exists()) return { ...(builtin || {}), id: snap.id, ...snap.data() };
+    } catch (err) {
+        if (!builtin) throw err;
+        console.warn("Firestore unavailable, showing built-in location:", err.message);
+    }
+    return builtin;
 }
 
 // ─── Check pad availability ───────────────────────────────────────────────────

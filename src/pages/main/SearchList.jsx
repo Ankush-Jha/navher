@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import BottomNav from '../../components/BottomNav';
 import { searchLocations } from '../../services/locationService';
 import { fetchRealPOIsNearby } from '../../services/overpassService';
+import { SHARDA_CENTER, isNearSharda, mergeLocations } from '../../data/shardaLocations';
 import toast from 'react-hot-toast';
 
 const CHIPS = ['Free', 'Has Pads', 'Open Now', '24×7', 'Cleanest'];
@@ -45,7 +46,7 @@ export default function SearchList() {
         let isMounted = true;
         setLoading(true);
 
-        const FALLBACK = { lat: 28.6139, lng: 77.2090 }; // Delhi fallback
+        const FALLBACK = SHARDA_CENTER; // Sharda University, Greater Noida
 
         const run = async (lat, lng) => {
             if (!isMounted) return;
@@ -66,11 +67,7 @@ export default function SearchList() {
                 .map(l => ({ ...l, distance: distanceKm(lat, lng, l.lat, l.lng) }));
 
             // Merge — Firestore takes priority, OSM fills gaps
-            const fsIds = new Set(fsItems.map(l => l.id));
-            const merged = [
-                ...fsItems,
-                ...osmItems.filter(l => !fsIds.has(l.id)),
-            ];
+            const merged = mergeLocations(fsItems, osmItems);
 
             // Apply search query filter
             let filtered = debouncedQuery.trim()
@@ -94,12 +91,19 @@ export default function SearchList() {
         };
 
         navigator.geolocation.getCurrentPosition(
-            pos => run(pos.coords.latitude, pos.coords.longitude),
+            pos => {
+                const { latitude: lat, longitude: lng } = pos.coords;
+                if (isNearSharda(lat, lng)) run(lat, lng);
+                else {
+                    toast('📍 Away from campus — showing Sharda University area', { duration: 4000 });
+                    run(FALLBACK.lat, FALLBACK.lng);
+                }
+            },
             () => {
-                toast('📍 Location unavailable — showing Delhi results', { icon: '⚠️', duration: 4000 });
+                toast('📍 Location unavailable — showing Sharda University area', { duration: 4000 });
                 run(FALLBACK.lat, FALLBACK.lng);
             },
-            { timeout: 10000, enableHighAccuracy: true, maximumAge: 30000 }
+            { timeout: 8000, enableHighAccuracy: false, maximumAge: 60000 }
         );
 
         return () => { isMounted = false; };

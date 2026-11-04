@@ -1,32 +1,49 @@
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-// Initialize the Firebase app in the service worker with your config
+// Real Firebase config for NavHer — kept in sync with .env
 const firebaseConfig = {
-    // Add your Firebase configuration keys here
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCNQVipQkG_FJbhmya9LxyaHe5lbbDO_Eg",
+    authDomain: "navher-app-wiscon.firebaseapp.com",
+    projectId: "navher-app-wiscon",
+    storageBucket: "navher-app-wiscon.firebasestorage.app",
+    messagingSenderId: "353829022034",
+    appId: "1:353829022034:web:c94774ae1fe7396e58f28b"
 };
 
-// Only initialize if the api key has been replaced 
-if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-    firebase.initializeApp(firebaseConfig);
-    const messaging = firebase.messaging();
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 
-    messaging.onBackgroundMessage((payload) => {
-        console.log('[firebase-messaging-sw.js] Received background message ', payload);
-        const notificationTitle = payload.notification?.title || 'NavHer Update';
-        const notificationOptions = {
-            body: payload.notification?.body || 'You have a new message from NavHer.',
-            icon: '/icon-192x192.png' // Make sure you have an icon matching this name
-        };
+messaging.onBackgroundMessage((payload) => {
+    console.log('[firebase-messaging-sw.js] Background message received:', payload);
 
-        self.registration.showNotification(notificationTitle, notificationOptions);
+    const { title = 'NavHer', body = 'You have a new update.' } = payload.notification ?? {};
+    const { type = '' } = payload.data ?? {};
+
+    const iconMap = {
+        sos_nearby: '/sos-icon.png',
+        pad_update: '/pad-icon.png',
+        cycle_reminder: '/cycle-icon.png',
+        points_earned: '/points-icon.png',
+    };
+
+    self.registration.showNotification(title, {
+        body,
+        icon: iconMap[type] ?? '/icon-192x192.png',
+        badge: '/badge-72x72.png',
+        tag: type || 'navher-notification',
+        vibrate: type === 'sos_nearby' ? [200, 100, 200, 100, 600] : [200, 100, 200],
+        data: payload.data,
+        actions: type === 'sos_nearby'
+            ? [{ action: 'open_sos', title: 'Open SOS' }]
+            : [],
     });
-} else {
-    console.warn('[firebase-messaging-sw.js] Firebase API keys are placeholders. Background notifications disabled.');
-}
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const type = event.notification.data?.type;
+    const url = type === 'sos_nearby' ? '/app/sos' : '/app/notifications';
+    event.waitUntil(clients.openWindow(url));
+});

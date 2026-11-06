@@ -102,7 +102,7 @@ class OnboardingScreen extends StatelessWidget {
                             ),
                           ),
                           TextSpan(
-                            text: 'Clean',
+                            text: 'Safe',
                             style: GoogleFonts.playfairDisplay(
                               fontSize: 38,
                               fontWeight: FontWeight.w900,
@@ -132,7 +132,7 @@ class OnboardingScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: Text(
-                        'Navigate your city with confidence. Discover verified, hygienic facilities exclusively for women anywhere in India.',
+                        'NavHer helps girls quickly find women-friendly washrooms and working pad vending machines—starting with Haryana / NCR.',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.nunito(
                           fontSize: 17,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../widgets/duo_button.dart';
 import '../widgets/progress_bar.dart';
@@ -15,6 +16,22 @@ class PadDeliveryScreen extends StatefulWidget {
 
 class _PadDeliveryScreenState extends State<PadDeliveryScreen> {
   int _selectedPartner = 0;
+
+  static const _partnerUrls = <int, String>{
+    0: 'https://blinkit.com/s/?q=sanitary%20pads',
+    1: 'https://www.zeptonow.com/search?query=sanitary%20pads',
+    2: 'https://www.swiggy.com/instamart/search?query=sanitary%20pads',
+  };
+
+  Future<void> _launchPartner() async {
+    final url = _partnerUrls[_selectedPartner] ?? _partnerUrls[0]!;
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open delivery partner')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,9 +264,9 @@ class _PadDeliveryScreenState extends State<PadDeliveryScreen> {
                 border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 2)),
               ),
               child: DuoButton(
-                label: 'PICK FASTEST FOR ME',
+                label: 'ORDER SANITARY PADS',
                 icon: Icons.rocket_launch,
-                onTap: () {},
+                onTap: _launchPartner,
               ),
             ),
           ],

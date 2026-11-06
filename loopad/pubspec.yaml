@@ -1,5 +1,5 @@
 name: loopad
-description: "LooPad - Women's Safety & Hygiene App"
+description: "NavHer - Women's Safety & Hygiene App"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,6 +12,28 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
   url_launcher: ^6.3.1
+
+  # Firebase
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  firebase_storage: ^12.3.2
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Map (OpenStreetMap — free, no API key)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
+  # Location
+  geolocator: ^12.0.0
+
+  # Images
+  cached_network_image: ^3.3.1
+
+  # Local storage
+  shared_preferences: ^2.2.3
 
 dev_dependencies:
   flutter_test:

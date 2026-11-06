@@ -97,7 +97,7 @@ class SafeSpacesScreen extends StatelessWidget {
                             child: const Icon(Icons.face_3, color: AppColors.accent, size: 24),
                           ),
                           Text(
-                            'LooPad',
+                            'NavHer',
                             style: GoogleFonts.nunito(
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
@@ -120,71 +120,74 @@ class SafeSpacesScreen extends StatelessWidget {
                     // Emergency pad banner
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.accent.withOpacity(0.15),
-                              const Color(0xFF00C4B4).withOpacity(0.15),
+                      child: GestureDetector(
+                        onTap: () => Navigator.pushNamed(context, '/pad-delivery'),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.accent.withOpacity(0.15),
+                                const Color(0xFF00C4B4).withOpacity(0.15),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.white.withOpacity(0.6)),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(Icons.medical_services, size: 20, color: AppColors.accent),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'No pads nearby?',
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textDark,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Order in ~15 mins (Blinkit)',
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF00C4B4),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                width: 36, height: 36,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_forward,
+                                  size: 18,
+                                  color: Color(0xFF00C4B4),
+                                ),
+                              ),
                             ],
                           ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white.withOpacity(0.6)),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.medical_services, size: 20, color: AppColors.accent),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'No pads within 1km?',
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Order in 15 mins',
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF00C4B4),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              width: 36, height: 36,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.arrow_forward,
-                                size: 18,
-                                color: Color(0xFF00C4B4),
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ),
@@ -338,6 +341,20 @@ class SafeSpacesScreen extends StatelessWidget {
                           badge: 'Has Pads',
                           badgeColor: const Color(0xFF00C4B4),
                           isClean: true,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/washroom-details',
+                            arguments: const {
+                              'name': 'The Oberoi Hotel',
+                              'subtitle': 'Hotel Washroom • Ground Floor',
+                              'distance': '450m',
+                              'rating': 4.8,
+                              'hasPads': true,
+                              'vendingWorking': true,
+                              'vendingInStock': true,
+                              'brands': ['Whisper', 'Sofy'],
+                            },
+                          ),
                         ),
                         const SizedBox(height: 14),
 
@@ -350,6 +367,20 @@ class SafeSpacesScreen extends StatelessWidget {
                           badge: 'Free',
                           badgeColor: AppColors.textMedium,
                           isClean: false,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/washroom-details',
+                            arguments: const {
+                              'name': 'Select Citywalk Mall',
+                              'subtitle': 'Mall Washroom • Level 1',
+                              'distance': '800m',
+                              'rating': 4.5,
+                              'hasPads': false,
+                              'vendingWorking': false,
+                              'vendingInStock': false,
+                              'brands': <String>[],
+                            },
+                          ),
                         ),
                       ],
                     ),
@@ -549,6 +580,7 @@ class _SpaceCard extends StatelessWidget {
   final String badge;
   final Color badgeColor;
   final bool isClean;
+  final VoidCallback? onTap;
 
   const _SpaceCard({
     required this.name,
@@ -558,25 +590,28 @@ class _SpaceCard extends StatelessWidget {
     required this.badge,
     required this.badgeColor,
     required this.isClean,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFF1F5F9).withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFF1F5F9).withOpacity(0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -683,7 +718,8 @@ class _SpaceCard extends StatelessWidget {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

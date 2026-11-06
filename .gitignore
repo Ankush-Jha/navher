@@ -26,3 +26,4 @@ pubspec.lock
 # Misc
 .env
 *.log
+.agent_context.md

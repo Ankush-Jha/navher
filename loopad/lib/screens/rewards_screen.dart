@@ -1,18 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
+import '../providers/auth_provider.dart';
+import '../providers/rewards_provider.dart';
+import '../services/rewards_service.dart';
+import '../widgets/section_header.dart';
 
-class RewardsScreen extends StatelessWidget {
+class RewardsScreen extends ConsumerWidget {
   const RewardsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final userId = authState.valueOrNull?.uid ?? '';
+
+    final foxPointsAsync = userId.isNotEmpty
+        ? ref.watch(foxPointsProvider(userId))
+        : const AsyncValue<int>.data(0);
+
+    final catalog = ref.watch(rewardCatalogProvider);
+
+    final points = foxPointsAsync.valueOrNull ?? 0;
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // ── Header ────────────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Row(
@@ -21,9 +37,14 @@ class RewardsScreen extends StatelessWidget {
                   GestureDetector(
                     onTap: () => Navigator.maybePop(context),
                     child: Container(
-                      width: 40, height: 40,
+                      width: 40,
+                      height: 40,
                       decoration: const BoxDecoration(shape: BoxShape.circle),
-                      child: const Icon(Icons.arrow_back_ios_new, color: AppColors.textLight, size: 20),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: AppColors.textLight,
+                        size: 20,
+                      ),
                     ),
                   ),
                   Text(
@@ -35,7 +56,8 @@ class RewardsScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    width: 40, height: 40,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
@@ -57,12 +79,13 @@ class RewardsScreen extends StatelessWidget {
                   children: [
                     const SizedBox(height: 24),
 
-                    // Points display
+                    // ── Fox Points badge ──────────────────────────────────────
                     Center(
                       child: Column(
                         children: [
                           Container(
-                            width: 96, height: 96,
+                            width: 96,
+                            height: 96,
                             decoration: BoxDecoration(
                               color: AppColors.accentYellow.withOpacity(0.1),
                               shape: BoxShape.circle,
@@ -72,92 +95,134 @@ class RewardsScreen extends StatelessWidget {
                                 strokeAlign: BorderSide.strokeAlignInside,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.monetization_on,
-                              size: 48,
-                              color: AppColors.accentYellow,
-                            ),
+                            child: foxPointsAsync.isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.accentYellow,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.monetization_on,
+                                    size: 48,
+                                    color: AppColors.accentYellow,
+                                  ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 12),
                           Text(
-                            '1,250',
+                            foxPointsAsync.isLoading
+                                ? '—'
+                                : _formatPoints(points),
                             style: GoogleFonts.nunito(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 48,
+                              fontWeight: FontWeight.w900,
                               color: AppColors.textDark,
-                              height: 1.1,
-                              letterSpacing: -0.5,
+                              height: 1,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'FOX POINTS',
+                            'Fox Points',
                             style: GoogleFonts.nunito(
-                              fontSize: 14,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textMedium,
-                              letterSpacing: 3,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Progress bar toward Free Pad (1500 pts)
+                          SizedBox(
+                            width: 240,
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Progress to Free Pad',
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textLight,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${_formatPoints(points)}/1,500',
+                                      style: GoogleFonts.nunito(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.accentYellow,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: (points / 1500).clamp(0.0, 1.0),
+                                    backgroundColor:
+                                        const Color(0xFFF1F5F9),
+                                    color: AppColors.accentYellow,
+                                    minHeight: 8,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
-                    // Encouragement banner
+                    // ── How to earn ───────────────────────────────────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.accentBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.accentBlue.withOpacity(0.2),
-                            width: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SectionHeader(
+                            title: 'How to Earn',
+                            icon: Icons.star,
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Text('🦊', style: TextStyle(fontSize: 24)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'You\'re doing great!',
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Earn 250 more points to unlock a free pad.',
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textMedium,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          const SizedBox(height: 12),
+                          _EarnTile(
+                            emoji: '⭐',
+                            label: 'Write a review',
+                            pts: '+20 pts',
+                            color: AppColors.accentYellow,
+                          ),
+                          _EarnTile(
+                            emoji: '📍',
+                            label: 'Report washroom issue',
+                            pts: '+10 pts',
+                            color: AppColors.accentTeal,
+                          ),
+                          _EarnTile(
+                            emoji: '🗺️',
+                            label: 'Add new washroom',
+                            pts: '+50 pts',
+                            color: AppColors.primary,
+                          ),
+                        ],
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
-                    // Redeem section header
+                    // ── Redeem section ────────────────────────────────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Row(
                         children: [
-                          const Icon(Icons.card_giftcard, size: 18, color: AppColors.textLight),
+                          const Icon(
+                            Icons.card_giftcard,
+                            size: 18,
+                            color: AppColors.textLight,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'REDEEM',
@@ -173,34 +238,26 @@ class RewardsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // Redeem cards
+                    // Catalog cards
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         children: [
-                          _RewardCard(
-                            emoji: '🩸',
-                            title: 'Free Pad',
-                            points: '1,500 pts',
-                            gradientColors: [const Color(0xFFF9A8D4), const Color(0xFFEC4899)],
-                            isLocked: true,
-                          ),
-                          const SizedBox(height: 16),
-                          _RewardCard(
-                            emoji: '☕',
-                            title: 'Coffee Voucher',
-                            points: '800 pts',
-                            gradientColors: [const Color(0xFF86EFAC), const Color(0xFF22C55E)],
-                            isLocked: false,
-                          ),
-                          const SizedBox(height: 16),
-                          _RewardCard(
-                            emoji: '🎫',
-                            title: 'Movie Ticket 10% Off',
-                            points: '500 pts',
-                            gradientColors: [const Color(0xFF93C5FD), const Color(0xFF3B82F6)],
-                            isLocked: false,
-                          ),
+                          for (int i = 0; i < catalog.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 16),
+                            _RewardCard(
+                              item: catalog[i],
+                              userPoints: points,
+                              onClaim: userId.isEmpty
+                                  ? null
+                                  : () => _handleRedeem(
+                                        context,
+                                        ref,
+                                        userId,
+                                        catalog[i],
+                                      ),
+                            ),
+                          ]
                         ],
                       ),
                     ),
@@ -213,25 +270,162 @@ class RewardsScreen extends StatelessWidget {
       ),
     );
   }
+
+  String _formatPoints(int pts) {
+    if (pts >= 1000) {
+      return '${(pts / 1000).toStringAsFixed(pts % 1000 == 0 ? 0 : 1)}k';
+    }
+    return pts.toString();
+  }
+
+  Future<void> _handleRedeem(
+    BuildContext context,
+    WidgetRef ref,
+    String userId,
+    RewardItem item,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Redeem ${item.emoji} ${item.name}?',
+          style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          'This will deduct ${item.pointsCost} Fox Points from your account.',
+          style: GoogleFonts.nunito(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Redeem',
+              style: GoogleFonts.nunito(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final svc = ref.read(rewardsServiceProvider);
+      await svc.redeem(userId: userId, item: item);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${item.emoji} ${item.name} redeemed! Check your email.',
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+            ),
+            backgroundColor: AppColors.accentTeal,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceFirst('Exception: ', ''),
+              style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 }
 
-class _RewardCard extends StatelessWidget {
-  final String emoji;
-  final String title;
-  final String points;
-  final List<Color> gradientColors;
-  final bool isLocked;
+// ── Earn tile ───────────────────────────────────────────────────────────────────
 
-  const _RewardCard({
+class _EarnTile extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final String pts;
+  final Color color;
+
+  const _EarnTile({
     required this.emoji,
-    required this.title,
-    required this.points,
-    required this.gradientColors,
-    required this.isLocked,
+    required this.label,
+    required this.pts,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              pts,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reward catalog card ─────────────────────────────────────────────────────────
+
+class _RewardCard extends StatelessWidget {
+  final RewardItem item;
+  final int userPoints;
+  final VoidCallback? onClaim;
+
+  const _RewardCard({
+    required this.item,
+    required this.userPoints,
+    this.onClaim,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final canClaim = userPoints >= item.pointsCost;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -248,68 +442,90 @@ class _RewardCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Emoji bubble
           Container(
-            width: 56, height: 56,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: gradientColors,
-              ),
+              color: canClaim
+                  ? AppColors.primary.withOpacity(0.12)
+                  : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: gradientColors[0].withOpacity(0.5)),
+              border: Border.all(
+                color: canClaim
+                    ? AppColors.primary.withOpacity(0.3)
+                    : const Color(0xFFE2E8F0),
+              ),
             ),
             child: Center(
-              child: Text(emoji, style: const TextStyle(fontSize: 28)),
+              child: Text(
+                item.emoji,
+                style: const TextStyle(fontSize: 28),
+              ),
             ),
           ),
           const SizedBox(width: 16),
+
+          // Name + cost
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  item.name,
                   style: GoogleFonts.nunito(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textDark,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  points,
+                  '${item.pointsCost} pts',
                   style: GoogleFonts.nunito(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.accentYellow,
+                    color: canClaim
+                        ? AppColors.accentYellow
+                        : AppColors.textLight,
                   ),
                 ),
               ],
             ),
           ),
-          if (isLocked)
+
+          // Claim / locked
+          if (!canClaim)
             Container(
-              width: 32, height: 32,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.borderSlate, width: 2),
               ),
-              child: const Icon(Icons.lock, size: 20, color: AppColors.textLight),
+              child: const Icon(
+                Icons.lock,
+                size: 20,
+                color: AppColors.textLight,
+              ),
             )
           else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Claim',
-                style: GoogleFonts.nunito(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+            GestureDetector(
+              onTap: onClaim,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Claim',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

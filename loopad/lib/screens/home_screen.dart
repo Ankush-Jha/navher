@@ -1,13 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
 import '../theme/app_colors.dart';
-import '../widgets/duo_button.dart';
+import '../providers/washroom_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+/// Provides the current device position (requests permission automatically).
+final _locationProvider = FutureProvider<Position?>((ref) async {
+  try {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return null;
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return null;
+    }
+    if (permission == LocationPermission.deniedForever) return null;
+
+    return await Geolocator.getCurrentPosition();
+  } catch (_) {
+    return null;
+  }
+});
+
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locationAsync = ref.watch(_locationProvider);
+
+    // Derive nearest washroom distance string from live Firestore data
+    String nearestLabel = 'Loading…';
+
+    locationAsync.whenData((pos) {
+      if (pos != null) {
+        final washAsync = ref.watch(
+          nearbyWashroomsProvider((lat: pos.latitude, lng: pos.longitude)),
+        );
+        washAsync.whenData((washrooms) {
+          if (washrooms.isNotEmpty) {
+            final dist = washrooms.first.distanceM ?? 0;
+            nearestLabel = dist < 1000
+                ? '${dist.round()} m away'
+                : '${(dist / 1000).toStringAsFixed(1)} km away';
+          }
+        });
+      }
+    });
+
     return Scaffold(
       backgroundColor: const Color(0xFFEBF5FF), // blue-50
       body: Stack(
@@ -93,7 +135,7 @@ class HomeScreen extends StatelessWidget {
             bottom: 340,
             right: 20,
             child: GestureDetector(
-              onTap: () {},
+              onTap: () => Navigator.pushNamed(context, '/sos'),
               child: Container(
                 width: 68,
                 height: 68,
@@ -182,15 +224,32 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
 
-                      // Clean Washrooms card
+                      // Clean Washrooms card — shows live nearest distance
                       _ActionCard(
                         emoji: '🚽',
                         title: 'Clean Washrooms',
-                        subtitle: 'Nearest 200m away',
+                        subtitle: locationAsync.when(
+                          data: (pos) {
+                            if (pos == null) return 'Enable location';
+                            final washAsync = ref.watch(
+                              nearbyWashroomsProvider(
+                                  (lat: pos.latitude, lng: pos.longitude)),
+                            );
+                            return washAsync.when(
+                              data: (w) => w.isNotEmpty
+                                  ? _formatDist(w.first.distanceM)
+                                  : 'No washrooms found',
+                              loading: () => 'Finding nearest…',
+                              error: (_, __) => 'Unable to load',
+                            );
+                          },
+                          loading: () => 'Getting location…',
+                          error: (_, __) => 'Location error',
+                        ),
                         subtitleIcon: Icons.location_on,
                         borderColor: AppColors.accentBlue,
                         accentColor: AppColors.accentBlue,
-                        bgColor: const Color(0xFFEFF6FF), // blue-50
+                        bgColor: const Color(0xFFEFF6FF),
                         onTap: () => Navigator.pushNamed(context, '/safe-spaces'),
                       ),
                       const SizedBox(height: 16),
@@ -203,7 +262,7 @@ class HomeScreen extends StatelessWidget {
                         subtitleIcon: Icons.bolt,
                         borderColor: AppColors.primary,
                         accentColor: AppColors.primary,
-                        bgColor: const Color(0xFFFFF0F3), // pink-50
+                        bgColor: const Color(0xFFFFF0F3),
                         onTap: () => Navigator.pushNamed(context, '/pad-delivery'),
                       ),
                     ],
@@ -215,6 +274,13 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatDist(double? distM) {
+    if (distM == null) return 'Nearby';
+    return distM < 1000
+        ? '${distM.round()} m away'
+        : '${(distM / 1000).toStringAsFixed(1)} km away';
   }
 }
 
